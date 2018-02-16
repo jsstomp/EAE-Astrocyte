@@ -19,6 +19,7 @@ if (length(args)==0) {
 #                            IMPORTS                               #
 ####################################################################
 suppressMessages(library(DESeq2))
+suppressMessages(library(edgeR))
 suppressMessages(library(ggplot2))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(kimisc))
@@ -37,6 +38,17 @@ countData <- read.table("RawFiles/mergedCounts.txt", header = T, row.names = 1, 
 createDAFSfile(countData, prefix)
 
 mat <- read.table(paste("Results/filtered_counts_", prefix, ".txt", sep=""), header = T, check.names = F)
+mat_mlcpm <- aveLogCPM(mat)
+
+### Other filtering method, https://support.bioconductor.org/p/75914/ (Gordon Smith)
+M <- median(colSums(countData)) * 1e-6 # median library size (millions)
+idx <- rowSums( cpm(countData) >= 5/M ) >= ncol(countData)/2 
+nr_features <- length(which(idx == TRUE))
+countData2 <- countData[idx, ]
+mlcpm <- aveLogCPM(countData2)
+
+write.table(countData2,"Results/count_data_alt.txt",quote=F,col.names=NA,row.names=T, sep="/t")
+###
 
 # Information about the different samples is written into the target
 # file, the step loads all of the necessary information.
@@ -67,9 +79,9 @@ data_ACSA$SampleID <- target$Sample.ID.Seq
 percentVar <- round(100 * attr(data_ACSA, "percentVar"))
 
 cbPalette <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a','#ffc948','#b15928')
-colors <- scale_color_brewer(palette="Paired")
+
 col <- colorRampPalette(brewer.pal(8, "Dark2"))(12)
-hsv(3,2,1)
+
 
 pdf(paste("Results/PCA_", prefix, ".pdf", sep = ""))
 ggplot(data_ACSA, aes(PC1, PC2, color=Population)) +
@@ -93,4 +105,12 @@ ggplot(data_ACSA, aes(PC1, PC2, color=groupID)) +
   labs(title="PCA plot", subtitle="Group of astrocytes", x=paste0("PC1: ",percentVar[1],"% variance"), y=paste("PC2: ",percentVar[2],"% variance")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(color = "black")) +
   scale_color_manual(values=cbPalette)
+ggplot() + aes(mlcpm) +
+  geom_histogram(binwidth=0.2, colour = "tomato4", fill="tomato3") +
+  labs(title="Filter Lowly Expressed Features", subtitle = "Densityplot of the average log CPM after filtering genes with less than 5 counts in half of the samples", x = "logCPM", y = "Frequency") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(color = "black"))
+ggplot() + aes(mat_mlcpm) +
+  geom_histogram(binwidth=0.2, colour = "tomato4", fill="tomato3") +
+  labs(title="Filter Lowly Expressed Features", subtitle = "Densityplot of the average log CPM after DAFS filtering", x = "logCPM", y = "Frequency") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(color = "black"))
 dev.off()
