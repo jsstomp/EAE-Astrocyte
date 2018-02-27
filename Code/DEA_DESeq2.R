@@ -4,17 +4,32 @@
 # Description: 
 #   This script finds differentially expressed genes using DESeq2
 ####################################################################
+args = commandArgs(trailingOnly=TRUE)
+# test if there is at least one argument: if not, return an error
+if (length(args)<2) {
+  stop("At least one argument must be supplied (prefix) (countfile).n", call.=FALSE)
+} else if (length(args)==2) {
+  prefix <- args[1]
+  countfile <- args[2]
+} else if (length(args)>2){
+  stop("Too many arguments, please only supply (prefix) (countfile).n", call.=FALSE)
+}
 
-setwd("~/Projects/EAE")
 ####################################################################
 #                           IMPORTS                                #
 ####################################################################
-library(DESeq2)
-library(edgeR)
-library(ggplot2)
+suppressMessages(library(DESeq2))
+suppressMessages(library(edgeR))
+suppressMessages(library(ggplot2))
+suppressMessages(library(RColorBrewer))
+suppressMessages(library(kimisc))
 
-countData <- read.table("Results/count_data_alt.txt", header = T, row.names = 1, check.names = F)
-ph_data <- read.csv("RawFiles/target.csv", row.names = 4)
+# set working directory to parent parent working directory of this file
+suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
+setwd("../..")
+
+countData <- read.table("Results/count_data_smith.txt", header = T, row.names = 1, check.names = F)
+ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)
 colnames(countData) <- rownames(ph_data)
 colData <- ph_data[,4:6]
 colData$Group <- paste(colData$Condition, colData$Region, colData$Population, sep="_")
@@ -43,10 +58,6 @@ do_DEA <- function(group1, group2) {
 
 do_DEA("C_HB_A", "C_HB_AG")
 groups <- unique(colData$Group)
-comparisons <- data.frame()
-comparisons <- within(colData, {
-  group1 = 
-})
 comparisons <- as.data.frame(t(data.frame(c("C_HB_A", "C_HB_AG"),c("C_HB_A", "C_SC_A"),c("C_SC_A", "C_HB_AG"),
                           c("E1_HB_A", "E1_HB_AG"),c("E1_HB_A", "E1_SC_A"),c("E1_SC_A", "E1_HB_AG"),
                           c("E4_HB_A", "E4_HB_AG"),c("E4_HB_A", "E4_SC_A"),c("E4_SC_A", "E4_HB_AG"),

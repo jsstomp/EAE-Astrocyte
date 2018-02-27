@@ -46,9 +46,6 @@ PCAplot <- function(data, PC1, PC2, color, subtitle, percent_var, colname){
 #                    Load Necessary information                    #
 ####################################################################
 cat("Loading necessary information...\n")
-target[,1] <- factor(toupper(as.character(target[,1])))
-target$groupID <- paste(target$Condition, target$Region, target$Population, sep="_")
-target <- target[match(colnames(countData), target$Sample.ID.Marissa),]
 # Make seperate target data per subtype for deeper PCA
 target_HBA <- target[which(target$Region == "HB" & target$Population == "A"),]
 target_HBAG <- target[which(target$Region == "HB" & target$Population == "AG"),]

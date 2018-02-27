@@ -14,7 +14,7 @@ if (length(args)<2) {
   prefix <- args[1]
   method.filter <- toupper(args[2])
 } else if (length(args)>2){
-  stop("Too many arguments, pleas only supply (prefix) (filtering method){DAFS|Smith}.n", call.=FALSE)
+  stop("Too many arguments, please only supply (prefix) (filtering method){DAFS|Smith}.n", call.=FALSE)
 }
 
 if(method.filter=="DAFS"|method.filter=="SMITH"){
@@ -78,6 +78,8 @@ exclude <- read.table("Results/excludes.txt")[,3]
 target <- target[-which(target$Sample.ID.Marissa %in% exclude),]
 # drop unused levels from factors in target
 target <- droplevels(target)
+# remove remark from target, its no longer interesting and has empty values.
+target <- target[-9]
 
 countData <- countData[,which(colnames(countData) %in% target$Sample.ID.Marissa)]
 
@@ -99,10 +101,14 @@ while(PCA_check!="y"|PCA_check!="n"){
   }
 }
 
+target[,1] <- factor(toupper(as.character(target[,1])))
+target$groupID <- paste(target$Condition, target$Region, target$Population, sep="_")
+target <- target[match(colnames(countData), target$Sample.ID.Marissa),]
+
 # Write results
 cat("Writing results...\n")
 write.table(countData,paste("Results/count_data_",prefix,".txt",sep=""),quote=F,col.names=NA,row.names=T, sep="\t")
-write.table(target,"Results/col_data.txt",quote=F,col.names=T,row.names=T, sep="\t")
+write.table(target,"Results/col_data.txt",col.names=T,row.names=F, sep="\t")
 
 # Density plot of filtered counts
 cat("Create density plot of filtered counts.\n")
