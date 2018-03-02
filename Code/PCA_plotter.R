@@ -26,7 +26,7 @@ cbPalette <- c('#1f78b4','#e31a1c','#33a02c','#696969','#b2df8a','#fdbf6f',
 PCAplot <- function(data, PC1, PC2, color, subtitle, percent_var, colname){
   gg <- ggplot(data, aes(PC1, PC2, color=color)) +
     geom_point(size=5) +
-    geom_text(aes(label=SampleID),hjust=-0.5, vjust=-0.5, size=3, col="black") +
+    #geom_text(aes(label=SampleID),hjust=-0.5, vjust=-0.5, size=3, col="black") +
     labs(title="PCA plot", subtitle=subtitle, x=paste0("PC1: ",percent_var[1],"% variance"),
          y=paste("PC2: ",percent_var[2],"% variance")) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),

@@ -51,7 +51,6 @@ if(method.filter=="DAFS"){
   if(!file.exists(paste("Results/filtered_counts_", prefix, ".txt", sep=""))){
     createDAFSfile(countData, prefix)
   }
-  test <- readline("What is the preferred filtering method, DAFS or Smith")
   countData <- read.table(paste("Results/filtered_counts_", prefix, ".txt", sep=""), header = T, check.names = F)
 } else if(method.filter=="SMITH"){
   ### Other filtering method, https://support.bioconductor.org/p/75914/ (Gordon Smith)
@@ -83,6 +82,12 @@ target <- target[-9]
 
 countData <- countData[,which(colnames(countData) %in% target$Sample.ID.Marissa)]
 
+
+target[,1] <- factor(toupper(as.character(target[,1])))
+target$groupID <- paste(target$Condition, target$Region, target$Population, sep="_")
+target <- target[match(colnames(countData), target$Sample.ID.Marissa),]
+
+
 PCA_check <- ""
 while(PCA_check!="y"|PCA_check!="n"){
   con <- file("stdin")
@@ -100,10 +105,6 @@ while(PCA_check!="y"|PCA_check!="n"){
     break
   }
 }
-
-target[,1] <- factor(toupper(as.character(target[,1])))
-target$groupID <- paste(target$Condition, target$Region, target$Population, sep="_")
-target <- target[match(colnames(countData), target$Sample.ID.Marissa),]
 
 # Write results
 cat("Writing results...\n")
