@@ -28,7 +28,7 @@ suppressMessages(library(kimisc))
 suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
 setwd("../..")
 
-countData <- read.table("Results/count_data_smith.txt", header = T, row.names = 1, check.names = F)
+countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
 ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)
 colnames(countData) <- rownames(ph_data)
 colData <- ph_data[,4:6]
@@ -52,8 +52,9 @@ do_DEA <- function(group1, group2) {
   res <- results(dds, alpha=0.01, lfcThreshold = 2, pAdjustMethod = "BH")
   resLFC <- lfcShrink(dds, coef=2)
   de_genes <- res[which(res$log2FoldChange > 2 & res$padj < 0.05),]
-  file_name <- paste("DEA_Results/de_genes_", gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
-  write.table(de_genes, file_name, quote=F, col.names=NA, row.names=T, sep="\t")
+  de_genes$ensembl_gene_id <- rownames(de_genes)
+  file_name <- paste("DEA_Results/de_genes_", prefix, gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
+  write.table(de_genes, file_name, quote=F, row.names=F, sep="\t")
 }
 
 do_DEA("C_HB_A", "C_HB_AG")
