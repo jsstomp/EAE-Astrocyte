@@ -28,6 +28,7 @@ suppressMessages(library(kimisc))
 suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
 setwd("../..")
 
+# load count and col data
 countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
 ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)
 colnames(countData) <- rownames(ph_data)
@@ -37,7 +38,6 @@ colData$Group <- paste(colData$Condition, colData$Region, colData$Population, se
 ####################################################################
 #                       DESeq2 analysis                            #
 ####################################################################
-# Make DESeq object
 
 # Function to find differentially expressed genes between 2 given subgroups
 do_DEA <- function(group1, group2) {
@@ -57,8 +57,8 @@ do_DEA <- function(group1, group2) {
   write.table(de_genes, file_name, quote=F, row.names=F, sep="\t")
 }
 
-do_DEA("C_HB_A", "C_HB_AG")
-groups <- unique(colData$Group)
+
+#groups <- unique(colData$Group)
 comparisons <- as.data.frame(t(data.frame(c("C_HB_A", "C_HB_AG"),c("C_HB_A", "C_SC_A"),c("C_SC_A", "C_HB_AG"),
                           c("E1_HB_A", "E1_HB_AG"),c("E1_HB_A", "E1_SC_A"),c("E1_SC_A", "E1_HB_AG"),
                           c("E4_HB_A", "E4_HB_AG"),c("E4_HB_A", "E4_SC_A"),c("E4_SC_A", "E4_HB_AG"),

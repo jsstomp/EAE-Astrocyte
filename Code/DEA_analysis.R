@@ -90,39 +90,35 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
   count = count + 1
   TBN(files, region )
 }
-
-all_results <- lapply(file_list, read.delim, sep= "\t", header=T)
-all_results <- do.call(rbind, all_results)
-aa <- all_results[order(all_results$ensembl_gene_id, abs(all_results$padj) ), ] #sort by id and reverse of abs(value)
-all_results <- aa[ !duplicated(aa$ensembl_gene_id), ]              # take the first row within each id
-
-m <- merge(all_results, gene_names, by="ensembl_gene_id")
-head(m2)
-head(all_results)
-
-
-cols <- palette(mycols)[as.fumeric(colData$groupID)]
-annotation <- data.frame(Group = colData$groupID, Region = colData$RP)
-rownames(annotation) <- colnames(e)
-
-heatmap.2(e, scale = "row", trace = "none", ColSideColors = cols, col = hmcol, cexRow = 0.05, hclustfun = "euclidian" )
-pheatmap(e, scale = "row", trace = "none", annotation_col = as.character(colData$groupID), annotation_colors = mycols[1],annotation_legend = FALSE, col = hmcol, fontsize_row = 0.05, fontsize_col = 6)
-?pheatmap
-
-
-pres.clust$ensembl_gene_id <- rownames(pres.clust)
-m3 <- merge(m, pres.clust, by = "ensembl_gene_id")
-m3 <- m3[order(m3$cluster),]
-rownames(m3) <- m3$external_gene_name
-m3 <- m3[c(1:7,9)]
+# 
+# all_results <- lapply(file_list, read.delim, sep= "\t", header=T)
+# all_results <- do.call(rbind, all_results)
+# aa <- all_results[order(all_results$ensembl_gene_id, abs(all_results$padj) ), ] #sort by id and reverse of abs(value)
+# all_results <- aa[ !duplicated(aa$ensembl_gene_id), ]              # take the first row within each id
+# 
+# m <- merge(all_results, gene_names, by="ensembl_gene_id")
+# head(m2)
+# head(all_results)
+# 
+# 
+# cols <- palette(mycols)[as.fumeric(colData$groupID)]
+# annotation <- data.frame(Group = colData$groupID, Region = colData$RP)
+# rownames(annotation) <- colnames(e)
+# 
+# heatmap.2(e, scale = "row", trace = "none", ColSideColors = cols, col = hmcol, cexRow = 0.05, hclustfun = "euclidian" )
+# pheatmap(e, scale = "row", trace = "none", annotation_col = as.character(colData$groupID), annotation_colors = mycols[1],annotation_legend = FALSE, col = hmcol, fontsize_row = 0.05, fontsize_col = 6)
+# ?pheatmap
+# 
+# 
+# pres.clust$ensembl_gene_id <- rownames(pres.clust)
+# m3 <- merge(m, pres.clust, by = "ensembl_gene_id")
+# m3 <- m3[order(m3$cluster),]
+# rownames(m3) <- m3$external_gene_name
+# m3 <- m3[c(1:7,9)]
 
 tt <- head(m[order(m$padj),], 10)
 write.table(tt, "Results/top_table.txt",quote=F,col.names=NA,row.names=T,sep="\t")
 write.csv(m3, file="cluster_metascape_input.csv")
-
-
-
-
 
 
 
