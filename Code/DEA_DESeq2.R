@@ -1,42 +1,55 @@
+#!/usr/bin/env Rscript
 ####################################################################
 # Author: Jafta Stomp
 # Date: 15-02-2018)
 # Description: 
 #   This script finds differentially expressed genes using DESeq2
 ####################################################################
-args = commandArgs(trailingOnly=TRUE)
-# test if there is at least one argument: if not, return an error
-if (length(args)<4) {
-  stop("At least one argument must be supplied (prefix) (countfile) (FDR) (logFC).n", call.=FALSE)
-} else if (length(args)==4) {
-  prefix <- args[1]
-  countfile <- args[2]
-  FDR <- as.numeric(args[3])
-  logFC <- as.numeric(args[4])
-} else if (length(args)>4){
-  stop("Too many arguments, please only supply (prefix) (countfile) (FDR) (logFC).n", call.=FALSE)
-}
 
+####################################################################
+#                           PARSER                                 #
+####################################################################
+suppressMessages(library(argparser))
+
+parser <- arg_parser('R script for running DEA using DESeq2')
+parser <- add_argument(parser, 'prefix', help='Please give a word or short description (no spaced) to be used in output files and directories')
+parser <- add_argument(parser, 'countfile', help='absolute path to countfile')
+parser <- add_argument(parser, 'FDR', type='numeric', help='wanted false discovery rate threshold')
+parser <- add_argument(parser, 'logFC', type='numeric', help='wanted log fold change threshold')
+parser <- add_argument(parser, '--analyze-results', flag = TRUE, help='optional argument if user wants to analyze results further')
+parser <- add_argument(parser, '--venn', flag = TRUE, help='optional argument for if the user wants to create a venn diagram of interesting genes per region')
+
+p <- parse_args(parser, argv=commandArgs(trailingOnly=TRUE))
+
+prefix <- p$prefix[1]
+countfile <- p$countfile[1]
+FDR <- p$FDR[1]
+logFC <- p$logFC[1]
+analysis <- p$analyze_results[1]
+venn <- p$venn[1]
 
 ####################################################################
 #                           IMPORTS                                #
 ####################################################################
+cat("Loading required libraries.\n")
 suppressMessages(library(DESeq2))
 suppressMessages(library(edgeR))
 suppressMessages(library(ggplot2))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(kimisc))
-library(fpc)
+suppressMessages(library(fpc))
 
 # set working directory to parent parent working directory of this file
 suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
 setwd("../..")
 
 # make output directory
+cat("Creating output directories.\n")
 dir.create(paste("Results/", prefix, sep=""), showWarnings = FALSE)
 dir.create(paste("Results/", prefix,"/DEA_Results/", sep=""), showWarnings = FALSE)
 
 # load count and col data
+cat("Reading input data.\n")
 countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
 ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)
 colnames(countData) <- rownames(ph_data)
@@ -46,7 +59,7 @@ colData$Group <- paste(colData$Condition, colData$Region, colData$Population, se
 ####################################################################
 #                       DESeq2 analysis                            #
 ####################################################################
-
+cat("Building functions.\n")
 # Function to find differentially expressed genes between 2 given subgroups
 do_DEA <- function(group1, group2) {
   columns <- colData[which(colData$Group == group1 | colData$Group == group2),]
@@ -85,8 +98,15 @@ rownames(comparisons) <- 1:length(rownames(comparisons))
 comparisons$group1 <- as.character(comparisons$group1)
 comparisons$group2 <- as.character(comparisons$group2)
 
-mapply(do_DEA, comparisons$group1, comparisons$group2)
+cat(paste("Starting to do differential expression analysis on ",length(rownames(comparisons)),
+          " different comparisons, please wait, this may take several minutes.\n",sep=""))
+invisible(suppressMessages(mapply(do_DEA, comparisons$group1, comparisons$group2)))
 
-
-source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/DEA_analysis.R")
-source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/venn_DEA.R")
+if(analysis==TRUE){
+  cat("Initiating DEA_analysis.R.\n")
+  source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/DEA_analysis.R")
+}
+if(venn==TRUE){
+  cat("Initiating venn_DEA.R.\n")
+  source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/venn_DEA.R")
+}
