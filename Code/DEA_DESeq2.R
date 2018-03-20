@@ -6,14 +6,17 @@
 ####################################################################
 args = commandArgs(trailingOnly=TRUE)
 # test if there is at least one argument: if not, return an error
-if (length(args)<2) {
-  stop("At least one argument must be supplied (prefix) (countfile).n", call.=FALSE)
-} else if (length(args)==2) {
+if (length(args)<4) {
+  stop("At least one argument must be supplied (prefix) (countfile) (FDR) (logFC).n", call.=FALSE)
+} else if (length(args)==4) {
   prefix <- args[1]
   countfile <- args[2]
-} else if (length(args)>2){
-  stop("Too many arguments, please only supply (prefix) (countfile).n", call.=FALSE)
+  FDR <- as.numeric(args[3])
+  logFC <- as.numeric(args[4])
+} else if (length(args)>4){
+  stop("Too many arguments, please only supply (prefix) (countfile) (FDR) (logFC).n", call.=FALSE)
 }
+
 
 ####################################################################
 #                           IMPORTS                                #
@@ -23,10 +26,15 @@ suppressMessages(library(edgeR))
 suppressMessages(library(ggplot2))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(kimisc))
+library(fpc)
 
 # set working directory to parent parent working directory of this file
 suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
 setwd("../..")
+
+# make output directory
+dir.create(paste("Results/", prefix, sep=""), showWarnings = FALSE)
+dir.create(paste("Results/", prefix,"/DEA_Results/", sep=""), showWarnings = FALSE)
 
 # load count and col data
 countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
@@ -49,11 +57,12 @@ do_DEA <- function(group1, group2) {
                                 columns,
                                 design = ~ Group)
   dds <- DESeq(dds)
-  res <- results(dds, alpha=0.01, lfcThreshold = 2, pAdjustMethod = "BH")
+  res <- results(dds, alpha=FDR, lfcThreshold = logFC, pAdjustMethod = "BH")
   resLFC <- lfcShrink(dds, coef=2)
-  de_genes <- res[which(res$log2FoldChange > 2 & res$padj < 0.05),]
+  de_genes <- res[which(abs(res$log2FoldChange) > logFC & res$padj < FDR),]
   de_genes$ensembl_gene_id <- rownames(de_genes)
-  file_name <- paste("DEA_Results/de_genes_", prefix, gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
+  
+  file_name <- paste("Results/", prefix,"/DEA_Results", "/de_genes_", prefix, "_", gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
   write.table(de_genes, file_name, quote=F, row.names=F, sep="\t")
 }
 
@@ -78,3 +87,6 @@ comparisons$group2 <- as.character(comparisons$group2)
 
 mapply(do_DEA, comparisons$group1, comparisons$group2)
 
+
+source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/DEA_analysis.R")
+source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/venn_DEA.R")
