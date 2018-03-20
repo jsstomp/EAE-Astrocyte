@@ -1,15 +1,15 @@
-file_list <- list.files("DEA_Results", full.names=T)
+# prefix <- "FDR005_logFC1"
+
+file_list <- list.files(paste("Results/", prefix,"/DEA_Results/", sep=""), full.names=T)
 HBAG_list <- grep("HBAG_.+HBAG\\.", file_list, value=TRUE)
 HBA_list <- grep("HBA_.+HBA\\.", file_list, value=TRUE)
 SCA_list <- grep("SCA_.+SCA\\.", file_list, value=TRUE)
 options(stringsAsFactors = F)
 
-library(pheatmap)
-library(edgeR)
-library(RColorBrewer)
-
-
-
+suppressMessages(library(pheatmap))
+suppressMessages(library(edgeR))
+suppressMessages(library(RColorBrewer))
+suppressMessages(library(fpc))
 
 TBN <- function(filenames, region) {
   # load and bind given files
@@ -34,19 +34,35 @@ TBN <- function(filenames, region) {
   #heatmap
   annotation <- data.frame(Group = col_data$groupID, Region = col_data$RP)
   rownames(annotation) <- colnames(e)
+  
+  nb <- pamk(e, krange = 3:8, criterion = "ch", usepam = T)
+  print(nb$nc)
+  nc <- nb$nc
+  pdf(file = NULL)
+  
   pres <- pheatmap(e, scale = "row", annotation = annotation, annotation_colors = mycols, col = hmcol, fontsize_row = 0.05, fontsize_col = 6)
-  pres.clust <- cbind(pres, cluster = cutree(pres$tree_row, k=6))
+  dev.off()
+  pres.clust <- cbind(pres, cluster = cutree(pres$tree_row, k=nc))
   pres.clust <- as.data.frame(unlist(pres.clust[,2]))
+  result$cluster <- pres.clust[order(rownames(pres.clust)),]
+  result$cluster[result$cluster==1] <- "#ff5300"
+  result$cluster[result$cluster==2] <- "#3f5eba"
+  result$cluster[result$cluster==3] <- "#e9003a"
+  result$cluster[result$cluster==4] <- "#56c7e9"
+  result$cluster[result$cluster==5] <- "#006633"
+  result$cluster[result$cluster==6] <- "#955659"
+  result$cluster[result$cluster==7] <- "#14e337"
+  result$cluster[result$cluster==8] <- "#ff73f9"
+  write.csv(result, file = paste("Results/",prefix,"/de_genes_",gsub("_","",region), sep=""))
   colnames(pres.clust) <- c("cluster")
   ann.cols <- list(cluster=colorRampPalette(c("dodgerblue2", "firebrick3")))
-  print(colnames(pres.clust))
   #rownames(annotation) <- colnames(e)
-  pheatmap(e, scale = "row", show_rownames = F, show_colnames = F, cutree_rows = 6, annotation = annotation,
+  pheatmap(e, main = paste("Heatmap Unsupervised Clustering", gsub("_","",region)), scale = "row", show_rownames = F, show_colnames = F, cutree_rows = nc, annotation = annotation,
            annotation_row = pres.clust, annotation_names_row = F, annotation_colors = mycols, col = hmcol)
   e2 <- e[,order(col_data$RP, col_data$group)]
-  pheatmap(e2, scale = "row", show_rownames = F, show_colnames = F, cluster_cols=FALSE, annotation = annotation,
+  pheatmap(e2, main = paste("Heatmap Supervised Clustering", gsub("_","",region)), scale = "row", show_rownames = F, show_colnames = F, cluster_cols=FALSE, cutree_rows = nc, annotation = annotation,
            annotation_row = pres.clust, annotation_names_row = F, annotation_colors = mycols, col = hmcol)
-  
+
 }
 
 # To make sure that the gene symbols of the Ensembl id's are known,
@@ -74,6 +90,8 @@ colData$RP <- paste(colData$Region, colData$Population, sep = "_")
 
 
 count <- 0
+pdf(paste("Results/",prefix,"/",prefix,"_heatmaps.pdf",sep = ""))
+
 for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
   if(count==1){
     region = "HB_A_"
@@ -88,8 +106,11 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
     region = "all"
   }
   count = count + 1
+  
   TBN(files, region )
+  
 }
+dev.off()
 # 
 # all_results <- lapply(file_list, read.delim, sep= "\t", header=T)
 # all_results <- do.call(rbind, all_results)
@@ -105,7 +126,8 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
 # annotation <- data.frame(Group = colData$groupID, Region = colData$RP)
 # rownames(annotation) <- colnames(e)
 # 
-# heatmap.2(e, scale = "row", trace = "none", ColSideColors = cols, col = hmcol, cexRow = 0.05, hclustfun = "euclidian" )
+# heatmap.2if(count==1){
+
 # pheatmap(e, scale = "row", trace = "none", annotation_col = as.character(colData$groupID), annotation_colors = mycols[1],annotation_legend = FALSE, col = hmcol, fontsize_row = 0.05, fontsize_col = 6)
 # ?pheatmap
 # 
@@ -113,13 +135,14 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
 # pres.clust$ensembl_gene_id <- rownames(pres.clust)
 # m3 <- merge(m, pres.clust, by = "ensembl_gene_id")
 # m3 <- m3[order(m3$cluster),]
-# rownames(m3) <- m3$external_gene_name
+# rownames(m3) <- m3$external_gene_namefor(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
+
 # m3 <- m3[c(1:7,9)]
-
-tt <- head(m[order(m$padj),], 10)
-write.table(tt, "Results/top_table.txt",quote=F,col.names=NA,row.names=T,sep="\t")
-write.csv(m3, file="cluster_metascape_input.csv")
-
+# 
+# tt <- head(m[order(m$padj),], 10)
+# write.table(tt, "Results/top_table.txt",quote=F,col.names=NA,row.names=T,sep="\t")
+# write.csv(m3, file="cluster_metascape_input.csv")
+# 
 
 
 
