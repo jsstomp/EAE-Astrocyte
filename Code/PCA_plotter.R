@@ -52,7 +52,7 @@ target_HBAG <- target[which(target$Region == "HB" & target$Population == "AG"),]
 target_SCA <- target[which(target$Region == "SC" & target$Population == "A"),]
 # Also make seperate count matrices per subtype for deeper PCA
 cd_HBA <- countData[,which(colnames(countData) %in% target_HBA$Sample.ID.Marissa)]
-cd_HBAG <- countData[,which(colnames(countData) %in% target_HBAG$Sample.ID.Marissa)]
+cd_HBAG <- countData[ ,which(colnames(countData) %in% target_HBAG$Sample.ID.Marissa)]
 cd_SCA <- countData[,which(colnames(countData) %in% target_SCA$Sample.ID.Marissa)]
 
 ####################################################################

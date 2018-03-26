@@ -1,10 +1,10 @@
 ####################################################################
 # Author: Jafta Stomp
-# Date: 23-03-2018
+# Date: 26-03-2018
 # Description: 
-#   This script filters out lowly expressed genes using DAFS.R
-#   and also creates PCA plots to look at if the different conditions
-#   cluster together.
+#   This script tries to identify Gene Ontology for a list of dea
+#   results. It does this using a package topGO using the fisher 
+#   exact test.
 ####################################################################
 ####################################################################
 #                           IMPORTS                                #
@@ -24,7 +24,7 @@ ens2eg <- function(ens_gene_list){
   return(my.eg.list)
 }
 
-topGOing <- function(file_name){
+topGOing <- function(file_name, dea_name){
   t <- read.table(file_name, header=T,sep="\t",row.names=1)
   my.ensmusg <- ens2eg(t$ensembl_gene_id)
   geneList <- factor(as.integer (all_genes %in% my.ensmusg))
@@ -42,8 +42,11 @@ topGOing <- function(file_name){
   tt <- termStat(GOdata, sel.terms)
   tt <- tt[which(tt$Significant > 0),]
   tt <- tt[order(tt$Significant, decreasing=T),]
-  p <- GOtest(GOdata)
-  return(p)
+  df <- GOtest(GOdata)
+  cat(paste("Writing results to ", paste("Results/", prefix,"/GO_Results/", sep=""), "...\t", sep=""))
+  write.csv(df, file = paste("Results/", prefix,"/GO_Results/", dea_name, ".csv",sep=""))
+  cat("DONE\n")
+  return(df)
 }
 
 GOtest <- function(godat){
@@ -96,15 +99,7 @@ plot_GO <- function(go_table, dea_name){
   cat("DONE\n")
 }
 
-####################################################################
-#                               CODE                               #
-####################################################################
-prefix <- "FDR001_logFC1"
-file_list <- list.files(paste("Results/", prefix,"/DEA_Results/", sep=""), full.names=T)
-countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
-dir.create(paste("Results/", prefix,"/GO_Results/", sep=""), showWarnings = FALSE)
-all_genes <- ens2eg(rownames(countData))
-
+# MAIN FUNCTION
 main <- function(path){
   dea_name <- gsub(".txt","",gsub(paste("de_genes_", prefix, "_",sep=""),"",gsub(".*\\/\\/","",path)))
   f <- file(path, open="rb")
@@ -115,14 +110,24 @@ main <- function(path){
   }
   if(nlines > 1){
     cat(paste("Starting Gene Enrichment Analysis on DEA results of: ", dea_name, ".\n", sep=""))
-    df <- topGOing(path)
+    df <- topGOing(path, dea_name)
     plot_GO(df, dea_name)
   }
   else{
     cat(paste(dea_name,"had no differentially expressed genes and will not be tested.\n"))
   }
 }
+####################################################################
+#                               CODE                               #
+####################################################################
+#prefix <- "FDR001_logFC1"
+# list files and read other files needed
+file_list <- list.files(paste("Results/", prefix,"/DEA_Results/", sep=""), full.names=T)
+countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
+# create directory if it doesn't exist yet
+dir.create(paste("Results/", prefix,"/GO_Results/", sep=""), showWarnings = FALSE)
+# convert gene ensembl id's to entrez id's for all genes in countData
+all_genes <- ens2eg(rownames(countData)) 
 
+# Start main
 suppressMessages(sapply(file_list,main))
-t <- file_list[2]
-main(t)

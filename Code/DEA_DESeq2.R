@@ -18,6 +18,7 @@ parser <- add_argument(parser, 'FDR', type='numeric', help='wanted false discove
 parser <- add_argument(parser, 'logFC', type='numeric', help='wanted log fold change threshold')
 parser <- add_argument(parser, '--analyze-results', flag = TRUE, help='optional argument if user wants to analyze results further')
 parser <- add_argument(parser, '--venn', flag = TRUE, help='optional argument for if the user wants to create a venn diagram of interesting genes per region')
+parser <- add_argument(parser, '--gene-ontology', flag = TRUE, help='optional argument for if the user wants to Gene Ontoloy Identification')
 
 p <- parse_args(parser, argv=commandArgs(trailingOnly=TRUE))
 
@@ -27,6 +28,8 @@ FDR <- p$FDR[1]
 logFC <- p$logFC[1]
 analysis <- p$analyze_results[1]
 venn <- p$venn[1]
+GO <- p$gene_ontology[1]
+
 
 ####################################################################
 #                           IMPORTS                                #
@@ -39,9 +42,10 @@ suppressMessages(library(RColorBrewer))
 suppressMessages(library(kimisc))
 suppressMessages(library(fpc))
 
+
 # set working directory to parent parent working directory of this file
 suppressMessages(setwd(gsub("DEA_DESeq2.R","",thisfile())))
-setwd("../..")
+setwd("../..")  #move out of git repository (where data is stored and saved to)
 
 # make output directory
 cat("Creating output directories.\n")
@@ -50,7 +54,7 @@ dir.create(paste("Results/", prefix,"/DEA_Results/", sep=""), showWarnings = FAL
 
 # load count and col data
 cat("Reading input data.\n")
-countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
+countData <- read.table(countfile, header = T, check.names = F)
 ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)
 colnames(countData) <- rownames(ph_data)
 colData <- ph_data[,4:6]
@@ -109,4 +113,8 @@ if(analysis==TRUE){
 if(venn==TRUE){
   cat("Initiating venn_DEA.R.\n")
   source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/venn_DEA.R")
+}
+if(GO==TRUE){
+  cat("Initiating gsva.R.\n")
+  source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/gsva.R")
 }
