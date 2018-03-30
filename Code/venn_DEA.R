@@ -77,9 +77,12 @@ venning <- function(db, region, title){
   a23 = nrow(subset(db, get(E4.control)==1 & get(Ech.control)==1))
   a123 = nrow(subset(db, get(E1.control)==1 & get(E4.control)==1 & get(Ech.control)==1))
   
+  png(paste("Results/", prefix, "/", prefix, "_VennDiagrams.pdf",sep=""))
   g = draw.triple.venn(area1 = a1,area2 = a2, area3 = a3, n12 = a12, n23 = a23, n13 = a13, n123 = a123,
                        category = c("E1","E4","Ech"), fill = c("blue","red","green"), euler.d=F, scaled=F, ind = F)
   grid.arrange(gTree(children=g), top=title, bottom="VennDiagram of EAE stages vs control")
+  dev.copy(a)
+  invisible(dev.off())
 }
 
 ####################################################################
@@ -102,6 +105,7 @@ suppressMessages(SCA_db <- vennDataBuilder(SCA_db, "SCA"))
 # make vennDiagrams
 cat("Creating Venn Diagrams and writing to Results.\n")
 pdf(paste("Results/", prefix, "/", prefix, "_VennDiagrams.pdf",sep=""))
+a <- dev.cur()
 venning(HBA_db, "HBA", "Region: Hindbrain acsa")
 venning(HBAG_db, "HBAG", "Region: Hindbrain acsa-glast")
 venning(SCA_db,"SCA", "Region: Spinal cord acsa")

@@ -116,5 +116,5 @@ if(venn==TRUE){
 }
 if(GO==TRUE){
   cat("Initiating gsva.R.\n")
-  source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/gsva.R")
+  source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/GOI.R")
 }

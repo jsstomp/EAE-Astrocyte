@@ -9,9 +9,9 @@
 ####################################################################
 #                           IMPORTS                                #
 ####################################################################
-library(topGO)
-library(org.Mm.eg.db)
-library(ggplot2)
+suppressMessages(library(topGO))
+suppressMessages(library(org.Mm.eg.db))
+suppressMessages(library(ggplot2))
 
 ####################################################################
 #                           FUNCTIONS                              #
@@ -93,7 +93,7 @@ plot_GO <- function(go_table, dea_name){
                                                          labels=reslabs2)) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_blank())
-  png(paste("Results/", prefix,"/GO_Results/", dea_name, ".png",sep=""))
+  png(paste("Results/", prefix,"/GO_Results/", dea_name, ".png",sep=""), width=800, height=800)
   print(gp)
   dev.off()
   cat("DONE\n")
@@ -108,6 +108,8 @@ main <- function(path){
   while (length(chunk <- readBin(f, "raw", 65536)) > 0) {
     nlines <- nlines + sum(chunk == as.raw(10L))
   }
+  invisible(close(f))
+  
   if(nlines > 1){
     cat(paste("Starting Gene Enrichment Analysis on DEA results of: ", dea_name, ".\n", sep=""))
     df <- topGOing(path, dea_name)
