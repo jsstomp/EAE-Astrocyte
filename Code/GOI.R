@@ -43,10 +43,11 @@ topGOing <- function(file_name, dea_name){
   tt <- tt[which(tt$Significant > 0),]
   tt <- tt[order(tt$Significant, decreasing=T),]
   df <- GOtest(GOdata)
+  df <- df[which(df$weight < 0.01 & df$Significant >= 3),]
   cat(paste("Writing results to ", paste("Results/", prefix,"/GO_Results/", sep=""), "...\t", sep=""))
   write.csv(df, file = paste("Results/", prefix,"/GO_Results/", dea_name, ".csv",sep=""))
   cat("DONE\n")
-  return(df)
+  return(df[1:20,])
 }
 
 GOtest <- function(godat){
@@ -64,7 +65,7 @@ GOtest <- function(godat){
   
   geneData(resultWeight)
   allRes <- GenTable(godat, classic = resultFisher, weight = resultWeight, 
-                     orderBy = "weight", ranksOf = "classic", topNodes = 20)
+                     orderBy = "weight", ranksOf = "classic", topNodes = 1000)
   return(allRes)
 }
 
@@ -79,7 +80,6 @@ plot_GO <- function(go_table, dea_name){
   # save levels to use for the labs
   reslabs1 <- levels(go_table$GO.ID)
   reslabs2 <- levels(go_table$Term)
-  
   cat("Sending graphs to Results...")
   gp <- ggplot(go_table, aes(as.numeric(GO.ID),min10log.weight)) + #numeric GO.ID to use continues scale
     geom_bar(stat="identity", width=.5, fill="tomato3") +
@@ -87,12 +87,13 @@ plot_GO <- function(go_table, dea_name){
          subtitle="Gene Ontology") + 
     coord_flip() +
     scale_y_continuous(name="-10log(p)") +
+    # Have GOid on left side of axis and GO term on right side using sex.acis
     scale_x_continuous(breaks=1:length(reslabs1), name = "GO",
                        labels=reslabs1,sec.axis=sec_axis(~.,
                                                          breaks=1:length(reslabs2),
                                                          labels=reslabs2)) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_blank())
+          panel.background = element_blank(), axis.line = element_blank(),axis.text=element_text(size=12))
   png(paste("Results/", prefix,"/GO_Results/", dea_name, ".png",sep=""), width=800, height=800)
   print(gp)
   dev.off()
@@ -103,20 +104,20 @@ plot_GO <- function(go_table, dea_name){
 main <- function(path){
   dea_name <- gsub(".txt","",gsub(paste("de_genes_", prefix, "_",sep=""),"",gsub(".*\\/\\/","",path)))
   f <- file(path, open="rb")
-  # Check if nlines in file is > 1, if not, dont run functions
+  # Check if nlines in file is > 2, if not, dont run functions (if file has only 1 gene, GO identification ddoesnt work)
   nlines <- 0L
   while (length(chunk <- readBin(f, "raw", 65536)) > 0) {
     nlines <- nlines + sum(chunk == as.raw(10L))
   }
   invisible(close(f))
   
-  if(nlines > 1){
+  if(nlines > 2){
     cat(paste("Starting Gene Enrichment Analysis on DEA results of: ", dea_name, ".\n", sep=""))
     df <- topGOing(path, dea_name)
     plot_GO(df, dea_name)
   }
   else{
-    cat(paste(dea_name,"had no differentially expressed genes and will not be tested.\n"))
+    cat(paste(dea_name,"had les than 2 differentially expressed genes and will not be tested.\n"))
   }
 }
 ####################################################################
