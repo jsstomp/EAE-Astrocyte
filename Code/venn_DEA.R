@@ -55,17 +55,22 @@ vennDataBuilder <- function(db, region){
   gene_count = 0
   for(x in list(E1,E4,Ech)){
     print(x)
-    pl <- venn_de_reader(control,x)
-    
-    db[x] <- ifelse(rownames(db) %in% pl$ensembl_gene_id, 1, 0)
-    
+    c_x <- venn_de_reader(control,x)
+    db[paste(x,"down",sep="_")] <- ifelse(rownames(db) %in% c_x$ensembl_gene_id, 1, 0)
   }
-  
+  for(x in list(E1,E4,Ech)){
+    x_c <- venn_de_reader(x,control)
+    db[paste(x,"up",sep="_")] <- ifelse(rownames(db) %in% x_c$ensembl_gene_id, 1, 0)
+  }
+  print(colnames(db))
   return(db)
 }
 
 # venning is a function that creates a venn diagram given a dataframe. The diagram consist of three circles (E1,E4,Ech)
 venning <- function(db, region, title){
+  colnames(db) <- c(paste("E1", region, sep=""),paste("E4", region, sep=""),paste("Ech", region, sep=""))
+  # print(colnames(db))
+  # quit()
   E1.control = paste("E1", region, sep="")
   E4.control = paste("E4", region, sep="")
   Ech.control = paste("Ech", region, sep="")
@@ -77,12 +82,12 @@ venning <- function(db, region, title){
   a23 = nrow(subset(db, get(E4.control)==1 & get(Ech.control)==1))
   a123 = nrow(subset(db, get(E1.control)==1 & get(E4.control)==1 & get(Ech.control)==1))
   
-  png(paste("Results/", prefix, "/", prefix, "_VennDiagrams.pdf",sep=""))
+  # png(paste("Results/", prefix, "/", prefix, "_VennDiagrams.pdf",sep=""))
   g = draw.triple.venn(area1 = a1,area2 = a2, area3 = a3, n12 = a12, n23 = a23, n13 = a13, n123 = a123,
                        category = c("E1","E4","Ech"), fill = c("blue","red","green"), euler.d=F, scaled=F, ind = F)
   grid.arrange(gTree(children=g), top=title, bottom="VennDiagram of EAE stages vs control")
-  dev.copy(a)
-  invisible(dev.off())
+  # dev.copy(a)
+  # invisible(dev.off())
 }
 
 ####################################################################
@@ -105,9 +110,12 @@ suppressMessages(SCA_db <- vennDataBuilder(SCA_db, "SCA"))
 # make vennDiagrams
 cat("Creating Venn Diagrams and writing to Results.\n")
 pdf(paste("Results/", prefix, "/", prefix, "_VennDiagrams.pdf",sep=""))
-a <- dev.cur()
-venning(HBA_db, "HBA", "Region: Hindbrain acsa")
-venning(HBAG_db, "HBAG", "Region: Hindbrain acsa-glast")
-venning(SCA_db,"SCA", "Region: Spinal cord acsa")
+# a <- dev.cur()
+venning(HBA_db[1:3], "HBA", "Region: Hindbrain acsa down")
+venning(HBAG_db[1:3], "HBAG", "Region: Hindbrain acsa-glast down")
+venning(SCA_db[1:3],"SCA", "Region: Spinal cord acsa down")
+venning(HBA_db[4:6], "HBA", "Region: Hindbrain acsa up")
+venning(HBAG_db[4:6], "HBAG", "Region: Hindbrain acsa-glast up")
+venning(SCA_db[4:6],"SCA", "Region: Spinal cord acsa up")
 invisible(dev.off())
 cat("Done!\n")

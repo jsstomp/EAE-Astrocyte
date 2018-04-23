@@ -58,7 +58,7 @@ analyzer <- function(filenames, region) {
   # cut the pheatmap tree using cutree and the predetermined number of clusters
   pres.clust <- cbind(pres, cluster = cutree(pres$tree_row, k=nc))
   pres.clust <- as.data.frame(unlist(pres.clust[,2]))
-  # Set clusters to colorcodes as requested by biologist
+  # Set clusters to colorcodes as requested by bioligist
   result$cluster <- pres.clust[order(rownames(pres.clust)),]
   result$cluster[result$cluster==1] <- "#ff5300"
   result$cluster[result$cluster==2] <- "#3f5eba"
@@ -125,8 +125,10 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
   else{
     region = "all"
   }
-  cat(paste("Start analysis for:", gsub("_","",region)))
+  cat(paste("Start analysis for: ", gsub("_","",region), ".\n", sep=""))
   count = count + 1
+  # print(str(as.vector(files)))
+  # print(str(region))
   suppressWarnings(analyzer(files, region ))
   cat("\tdone!\n")
 }

@@ -78,9 +78,18 @@ do_DEA <- function(group1, group2) {
   resLFC <- lfcShrink(dds, coef=2)
   de_genes <- res[which(abs(res$log2FoldChange) > logFC & res$padj < FDR),]
   de_genes$ensembl_gene_id <- rownames(de_genes)
+  #distinguish up and down regulated genes
+  up_genes <- res[which(res$log2FoldChange > logFC & res$padj < FDR),]
+  up_genes$ensembl_gene_id <- rownames(up_genes)
+  down_genes <- res[which(res$log2FoldChange < -logFC & res$padj < FDR),]
+  down_genes$ensembl_gene_id <- rownames(down_genes)
   
-  file_name <- paste("Results/", prefix,"/DEA_Results", "/de_genes_", prefix, "_", gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
-  write.table(de_genes, file_name, quote=F, row.names=F, sep="\t")
+  #file_name <- paste("Results/", prefix,"/DEA_Results", "/de_genes_", prefix, "_", gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
+  file_name_up <- paste("Results/", prefix,"/DEA_Results", "/de_genes_", prefix, "_", gsub("_", "", group2), "_vs_", gsub("_", "", group1), ".txt", sep = "")
+  file_name_down <- paste("Results/", prefix,"/DEA_Results", "/de_genes_", prefix, "_", gsub("_", "", group1), "_vs_", gsub("_", "", group2), ".txt", sep = "")
+  #write.table(de_genes, file_name, quote=F, row.names=F, sep="\t")
+  write.table(up_genes, file_name_up, quote=F, row.names=F, sep="\t")
+  write.table(down_genes, file_name_down, quote=F, row.names=F, sep="\t")
 }
 
 
@@ -102,9 +111,13 @@ rownames(comparisons) <- 1:length(rownames(comparisons))
 comparisons$group1 <- as.character(comparisons$group1)
 comparisons$group2 <- as.character(comparisons$group2)
 
-cat(paste("Starting to do differential expression analysis on ",length(rownames(comparisons)),
-          " different comparisons, please wait, this may take several minutes.\n",sep=""))
-invisible(suppressMessages(mapply(do_DEA, comparisons$group1, comparisons$group2)))
+if(!file.exists(paste("Results/", prefix,"/DEA_Results/", sep=""))){
+  cat(paste("Starting to do differential expression analysis on ",length(rownames(comparisons)),
+            " different comparisons, please wait, this may take several minutes.\n",sep=""))
+  invisible(suppressMessages(mapply(do_DEA, comparisons$group1, comparisons$group2)))
+}else{
+  cat("Files already exist, skipping DEA for time saving.\n")
+}
 
 if(analysis==TRUE){
   cat("Initiating DEA_analysis.R.\n")
@@ -115,6 +128,6 @@ if(venn==TRUE){
   source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/venn_DEA.R")
 }
 if(GO==TRUE){
-  cat("Initiating gsva.R.\n")
+  cat("Initiating GOI.R.\n")
   source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/GOI.R")
 }
