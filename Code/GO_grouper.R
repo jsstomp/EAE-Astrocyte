@@ -1,8 +1,8 @@
 ####################################################################
 # Author: Jafta Stomp
-# Date: 29-03-2018
+# Date: 25-04-2018
 # Description: 
-#   This script groups GO's together towards their parents
+#   This script groups GO's together towards their first common ancestor
 ####################################################################
 #                            IMPORTS                               #
 ####################################################################
@@ -12,15 +12,13 @@ suppressMessages(library(GOSim))
 ####################################################################
 #                            FUNCTIONS                             #
 ####################################################################
-
-
-
 main <- function(file_list){
   ## Main function of this script, initializes other functions
   ## returns a dataframe object.
   
   cat("Find GOids.\n")
-  GOids <- file_list_reader(file_list)
+  GOids <- file_list_reader(file_list)[[1]]
+  genes <- file_list_reader(file_list)[2]
   cat("build similarity matrix.\n")
   # getTermSim returns the pairwise similarities between GOterms in the form of a similarity matrix
   sim_mat <- getTermSim(GOids) # uses default method: 'Relevance'
@@ -28,7 +26,9 @@ main <- function(file_list){
   group_list <- lister(sim_mat)
   
   group_list <- bottom_adder(GOids,group_list)
-  return(group_list)
+  
+  total <- go_gene_relinking(group_list,genes)
+  return(total)
 }
 
 
@@ -72,7 +72,9 @@ file_list_reader <- function(file_list){
   
   # Only GO IDs are interesting so only keep those and return them. also only keep the levels (not interested in duplicates)
   GOids <- levels(as.factor(GOs$GO.ID))
-  return(GOids)
+  # Genes are also interesting, here we can already discover the number of genes and the total number or fisher exact value
+  genes <- GOs[,c(2,4,5,10)]
+  return(list(GOids,genes))
 }
 
 
@@ -227,6 +229,40 @@ recursive_mgetMinimumSubsumer <- function(df, depth, skiplist){
 }
 
 
+go_gene_relinking <- function(gos,genes){
+  colnames(gos)[1] <- "GO.ID"
+  df <- merge(gos,genes,by="GO.ID")
+  print(dim(gos))
+  print(str(genes))
+  return(df)
+}
+
+
+gene_deduplication <- function(df){
+  nl <- list()
+  member_list <- c()
+  for(i in 1:length(rownames(df))){
+    GOid <- as.character(df[i,]$GO.ID)
+    # print(as.character(GOid))
+    genes <- unlist(strsplit(as.character(df[i,]$genes), ","))
+    # print(genes)
+    if(GOid %in% member_list){
+      nl[[GOid]] <- unique(c(nl[[GOid]],genes))
+    }
+    else{
+      nl[[GOid]] <- c(genes)
+      member_list <- c(member_list,GOid)
+    }
+  }
+  # Replace significant n genes in df by total significant unique genes
+  for(x in df$GO.ID){
+    df[which(df$GO.ID == x),]$Significant <- length(nl[[x]])
+  }
+  df$proportion.genes <- apply(df,1,function(x){
+    round(as.numeric(x[7])/as.numeric(x[6]),digits = 3)
+  })
+}
+
 ####################################################################
 #                              CODE                                #
 ####################################################################
@@ -235,6 +271,7 @@ recursive_mgetMinimumSubsumer <- function(df, depth, skiplist){
 go_results <- "Results/FDR001_logFC1_all/GO_Results/"
 similarity <- 0.6  # Current threshold for GO term similarity
 
+# A list containing lists of files that contain GOs that need to be grouped together
 filelist <- list(
   c(paste(go_results,c("CSCA_vs_E1SCA.csv","CSCA_vs_E4SCA.csv","CSCA_vs_EchSCA.csv"), sep="")),
   c(paste(go_results,c("E1SCA_vs_CSCA.csv","E4SCA_vs_CSCA.csv","EchSCA_vs_CSCA.csv"), sep=""))
@@ -243,8 +280,9 @@ filelist <- list(
 # Mouse database
 mmGO <- godata('org.Mm.eg.db', ont="BP")
 
-g <- main(filelist[[1]])
+# g <- main(filelist[[1]])
 
+# Run main function for each list of files
 groups <- lapply(filelist, function(fl){
   # print(fl)
   main(fl)
