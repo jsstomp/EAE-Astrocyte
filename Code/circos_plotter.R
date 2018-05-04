@@ -1,109 +1,106 @@
-####################################################################
-# Author: Jafta Stomp
-# Date: 26-03-2018
-# Description: 
-#   This script makes a circos plot using DEA/GO results
-####################################################################
-library(circlize)
 
-set.seed(999)
-n = 1000
-df = data.frame(factors = sample(letters[1:8], n, replace = TRUE),
-                x = rnorm(n), y = runif(n))
-df <- data.frame(factors = c(sample(letters[1],500, replace=T), sample(letters[2:8], 500, replace=T))
-                 ,x = rnorm(n), y=runif(n))
-
-
-circos.par("track.height" = 0.1)
-circos.initialize(factors = df$factors, x = df$x, sector.width = c(7,1,1,1,1,1,1,1))
-
-circos.track(factors = df$factors, y = df$y,
-             panel.fun = function(x, y) {
-               circos.text(CELL_META$xcenter, CELL_META$cell.ylim[2] + uy(6, "mm"), 
-                           CELL_META$sector.index)
-               circos.axis(labels.cex = 0.6)
-             })
-col = rep(c("#FF0000", "#00FF00"), 4)
-circos.trackPoints(df$factors, df$x, df$y, col = col, pch = 16, cex = 0.5)
-circos.text(-1, -0.5, "text", sector.index = "a", track.index = 1)
-
-bgcol = rep(c("#EFEFEF", "#CCCCCC"), 4)
-circos.trackHist(df$factors, df$x, bin.size = 0.2, bg.col = bgcol, col = NA)
-
-circos.track(factors = df$factors, x = df$x, y = df$y,
-             panel.fun = function(x, y) {
-               ind = sample(length(x), 10)
-               x2 = x[ind]
-               y2 = y[ind]
-               od = order(x2)
-               circos.lines(x2[od], y2[od])
-             })
-
-circos.update(sector.index = "a", track.index = 2, 
-              bg.col = "#FF8080", bg.border = "black")
-circos.points(x = -2:2, y = rep(0.5, 5), col = "white")
-circos.text(CELL_META$xcenter, CELL_META$ycenter, "updated", col = "white")
-
-circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
-  xlim = CELL_META$xlim
-  ylim = CELL_META$ylim
-  breaks = seq(xlim[1], xlim[2], by = 0.1)
-  n_breaks = length(breaks)
-  circos.rect(breaks[-n_breaks], rep(ylim[1], n_breaks - 1),
-              breaks[-1], rep(ylim[2], n_breaks - 1),
-              col = rand_color(n_breaks), border = NA)
-})
-
-circos.link("a", 0, "b", 0, h = 0.4)
-circos.link("c", c(-0.5, 0.5), "d", c(-0.5,0.5), col = "red",
-            border = "blue", h = 0.2)
-circos.link("e", 0, "g", c(-1,1), col = "green", border = "black", lwd = 2, lty = 2)
-circos.link("c", c(0,1), "h", c(-1,1), col = "yellow", lwd = 2, lty = 2)
-
-circos.clear()
-
-##########################################################################################################
-
-#op = par(no.readonly = TRUE)
-
-#par(mar = c(2, 2, 2, 2), mfrow = c(1, 3))
-
-factors = letters[1:4]
-factors = c("HBA","HBAG","SCA",letters[1:26])
-factors1 = c(factors[1:3],paste(factors[1:3],".1"))
-factors2 = sample(rownames(countData),200)
-# factors2 = c(genes, paste(genes,".1"))
-circos.par("canvas.xlim" = c(-1, 1.5), "canvas.ylim" = c(-1, 1.5), start.degree = -45)
-circos.initialize(factors = factors1, xlim = c(0, 1))
-circos.trackPlotRegion(ylim = c(0, 1), bg.col = NA, bg.border = NA)
-circos.updatePlotRegion(sector.index = factors[1])
-circos.text(0.5, 0.5, factors[1], niceFacing = T)
-circos.updatePlotRegion(sector.index = factors[2])
-circos.text(0.5, 0.5, factors[2], niceFacing = T)
-circos.updatePlotRegion(sector.index = factors[3])
-circos.text(0.5, 0.5, factors[3], niceFacing = T)
-
-circos.clear()
-box()
-axis(side = 1)
-axis(side = 2)
-
-
-circos.clear()
-
-par(new = TRUE)
-circos.par("canvas.xlim" = c(-1.5, 1), "canvas.ylim" = c(-1.5, 1), start.degree = -45)
-circos.par(cell.padding = c(0.02, 0, 0.02, 0))
-circos.initialize(factors = factors2, xlim = c(0, 1))
-circos.trackPlotRegion(ylim = c(0, 1), bg.col = NA, bg.border = NA)
-for(i in factors2[101:length(factors2)]){
-  circos.updatePlotRegion(sector.index = i)
-  # circos.text(0.5, 0.5, i, facing = "clockwise")
+circler <- function(df, go_groups,tests){
+  # set colors for sectors
+  col1 = brewer.pal(length(d3Gos), "Set3")
+  names(col1) = d3Gos
+  col2 = brewer.pal(3, "Set1")
+  names(col2) = tests
+  
+  df[[1]] = as.character(df[[1]])
+  df[[2]] = as.character(df[[2]])
+  
+  sector = NULL
+  
+  sector_xlim = NULL
+  for(t in unique(df[[1]])) {
+    sector = c(sector, t)
+    sector_xlim = rbind(sector_xlim, c(0, sum(df[df[[1]] == t, 3])))
+  }
+  for(t in unique(df[[2]])) {
+    sector = c(sector, t)
+    sector_xlim = rbind(sector_xlim, c(0, sum(df[df[[2]] == t, 4])))
+  }
+  
+  # Start if circos plot
+  
+  # Initiate the circos frame
+  circos.par(cell.padding = c(0, 0, 0, 0), start.degree = 270, gap.degree = c(rep(1,length(tests)-1),10,rep(1,length(d3Gos)-1),10))
+  
+  #  Initialize circos using factors, 3 comparisons and x depth 3 GOs also set sector width with a total sum of 2
+  circos.initialize(factors = factor(sector, levels = sector), xlim = sector_xlim,
+                    sector.width = c(rep(1/3,3), c(rep(1/length(d3Gos),length(d3Gos)))))
+  
+  # First track on the right side of the plot containing the GO group names
+  circos.trackPlotRegion(ylim = c(0, 1), panel.fun = function(x, y) {
+    sector.index = get.cell.meta.data("sector.index")
+    if(sector.index %in% sector[4:13]) {
+      xlim = get.cell.meta.data("xlim")
+      ylim = get.cell.meta.data("ylim")
+      l = unique(g[[3]]) == sector.index
+      x = seq(0, by = 3, length = sum(l))
+      x = x + mean(xlim) - mean(x)
+      circos.rect(xlim[1], ylim[1], xlim[2], ylim[2], col = col1[sector.index], border = NA)
+      circos.text(x, rep(0, sum(l)), sector.index, col = "black", facing = "bending.inside", adj = c(0.5, -1), cex = 0.7)
+      
+    }
+  }, bg.border = NA, track.height = 0.08)
+  
+  # Second track on the right side containing the names of the top 10 GOs for each GO group
+  circos.trackPlotRegion(ylim = c(1, 10), panel.fun = function(x, y) {
+    sector.index = get.cell.meta.data("sector.index")
+    xlim = get.cell.meta.data("xlim")
+    ylim = get.cell.meta.data("ylim")
+    if(sector.index %in% sector[4:13]) {
+      l = unique(g[[3]]) == sector.index
+      # print(sum(l))
+      x = seq(0, by = 3, length = 1)
+      print(mean(xlim))
+      print(mean(x))
+      x = x + mean(xlim)
+      print(x)
+      # print(sector.index)
+      s <- as.character(go_groups[which(go_groups$GOgroup==sector.index),2:11])
+      s <- s[!(is.na(s))]
+      # s <- s[2:length(s)]
+      print(s)
+      if(sector.index %in% sector[4:13]) {
+        circos.text(rep(x[1], length(s)), seq_len(length(s)), s, cex = 0.6, facing = "bending.inside")
+      }
+    }
+  }, bg.border = NA, track.height = 0.2)
+  
+  # Third track full circle, right side GO group names again and on the left side the 3 tests
+  circos.trackPlotRegion(ylim = c(0, 1), panel.fun = function(x, y) {
+    sector.index = get.cell.meta.data("sector.index")
+    xlim = get.cell.meta.data("xlim")
+    ylim = get.cell.meta.data("ylim")
+    circos.text(mean(xlim), mean(ylim), sector.index, cex = 0.6, facing = "bending.inside")
+  }, track.height = 0.05, bg.border = NA)
+  
+  # Fourth track, this will be filles with the proportions of either genes or gos from left to right or right to left
+  circos.trackPlotRegion(ylim = c(0, 1), panel.fun = function(x, y) {
+  }, track.height = 0.02, bg.col = c(col2, col1), track.margin = c(0, 0.01))
+  circos.trackPlotRegion(ylim = c(0, 1), panel.fun = function(x, y) {
+  }, track.height = 0.02, track.margin = c(0, 0.01))
+  
+  # get accumulative data for the final part of the plot (linking)
+  accum_gos = sapply(d3Gos, function(x) get.cell.meta.data("xrange", sector.index = x)); names(accum_gos) = d3Gos
+  accum_genes = sapply(tests, function(x) get.cell.meta.data("xrange", sector.index = x)); names(accum_genes) = tests
+  
+  for(i in seq_len(nrow(df))) {
+    # Make a link between tests and GO groups
+    circos.link(df[i,1], c(accum_genes[df[i,1]], accum_genes[df[i,1]] - df[i, 3]),
+                df[i,2], c(accum_gos[df[i,2]], accum_gos[df[i,2]] - df[i, 4]),
+                col = paste0(col1[df[i,2]], "80"), border = NA)
+    
+    # Add colors for the fourth track proportions.
+    circos.rect(accum_genes[df[i,1]], 0, accum_genes[df[i,1]] - df[i, 3], 1, sector.index = df[i,1], col = col1[df[i,2]])
+    circos.rect(accum_gos[df[i,2]], 0, accum_gos[df[i,2]] - df[i, 4], 1, sector.index = df[i,2], col = col2[df[i,1]])
+  
+    accum_genes[df[i,1]] = accum_genes[df[i,1]] - df[i, 3]
+    accum_gos[df[i,2]] = accum_gos[df[i,2]] - df[i, 4]
+  }
+  
+  #clear the plot.
+  circos.clear()
 }
-
-circos.link("SCA", 0, "ENSMUSG0000040034", 0, h = 0.4)
-
-circos.clear()
-
-#par(op)
-
