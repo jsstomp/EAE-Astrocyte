@@ -34,6 +34,8 @@ analyzer <- function(filenames, region) {
   result <- aa[ !duplicated(aa$ensembl_gene_id), ]  #take first row within each id
   # merge result with genename dataset to get the corrosponding gene name for each ensembl id
   m <- merge(result, gene_names, by="ensembl_gene_id")
+  # print(colnames(m))
+  write(m$external_gene_name,file=paste("Results/", prefix,"/genes_", region, ".txt",sep=""))
   # perpare countdata for heatmapping
   if(region=="all"){
     count_data <- countData
@@ -69,7 +71,7 @@ analyzer <- function(filenames, region) {
   result$cluster[result$cluster==7] <- "#14e337"
   result$cluster[result$cluster==8] <- "#ff73f9"
   # Write results to csv file (per region) to be used by biologist
-  write.csv(result, file = paste("Results/",prefix,"/de_genes_",gsub("_","",region), sep=""))
+  write.csv(result, file = paste("Results/",prefix,"/de_genes_",gsub("_","",region),".csv", sep=""))
   colnames(pres.clust) <- c("cluster")
   ann.cols <- list(cluster=colorRampPalette(c("dodgerblue2", "firebrick3")))
   # make unsupervised heatmap
