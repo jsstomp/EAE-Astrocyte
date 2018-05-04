@@ -29,7 +29,6 @@ ens2eg <- function(ens_gene_list){
   return(my.eg.list)
 }
 
-
 topGOing <- function(file_name, dea_name){
   ## Function that builds a topGO object and retrieves gene symbols after testing
   ## Returns top 20 GOs for plotting
@@ -40,6 +39,8 @@ topGOing <- function(file_name, dea_name){
   # Make a named list of genes and a 0 or 1 if gene occurs using all_genes
   geneList <- factor(as.integer (all_genes %in% my.ezmusg))
   names(geneList) <- all_genes
+  #write genes
+  writeGenes(my.ezmusg,dea_name)
   cat("Building topGO object, this may take several minutes please wait...\t")
   # Build the topGO object, look only for Biological Process GOs in mouse
   GOdata <- new("topGOdata",
