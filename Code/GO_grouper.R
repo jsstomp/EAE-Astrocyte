@@ -3,11 +3,15 @@
 # Date: 25-04-2018
 # Description: 
 #   This script groups GO's together towards their first common ancestor
+#   and initiates circos_plotter.R to make a circos plot of genes and GOs
 ####################################################################
 #                            IMPORTS                               #
 ####################################################################
 suppressMessages(library(GOSemSim))
 suppressMessages(library(GOSim))
+suppressMessages(library(RColorBrewer))
+suppressMessages(library(circlize))
+suppressMessages(source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/circos_plotter.R"))
 
 ####################################################################
 #                            FUNCTIONS                             #
@@ -28,6 +32,8 @@ main <- function(file_list){
   group_list <- bottom_adder(GOids,group_list)
   
   total <- go_gene_relinking(group_list,genes)
+
+  groups <- go_grouper(total, file_list)
   return(total)
 }
 
@@ -73,7 +79,7 @@ file_list_reader <- function(file_list){
   # Only GO IDs are interesting so only keep those and return them. also only keep the levels (not interested in duplicates)
   GOids <- levels(as.factor(GOs$GO.ID))
   # Genes are also interesting, here we can already discover the number of genes and the total number or fisher exact value
-  genes <- GOs[,c(2,4,5,10)]
+  genes <- GOs[,c(2,4,5,9,10)]
   return(list(GOids,genes))
 }
 
@@ -263,6 +269,133 @@ gene_deduplication <- function(df){
   })
 }
 
+
+go_grouper <- function(g, file_list){
+  d3Gos <- c(levels(as.factor(as.character(g[which(g$depth==3),]$match))),"GO:0008150")
+
+  # data.frame object with 11 columns, first column is the different go_groups and the other 10 are the top 10 GO's matched to the group
+  # NAs are initiated for when a group has less than 10 GO's matched
+  pr <- get.genes(file_list)
+  
+  # determine the direction of the current set of files.
+  direction <- NULL
+  # if the analysis starts with control, it contains down regulated genes/ GOs
+  if(startsWith(pr[[2]][1], "C")){
+    direction <- "down"
+  } else direction <- "up"
+  
+  go_groups <- data.frame(GOgroup = d3Gos, GO1 = NA, GO2 = NA, GO3 = NA, GO4 = NA, GO5 = NA,
+                          GO6 = NA, GO7 = NA, GO8 = NA, GO9 = NA, GO10 = NA, ngenes = 0, genes = NA)
+  # for every group try to find the GOs linked to it
+  for(go in go_groups$GOgroup){
+    all_gos <- g[which(g$match==go),c(1,2,8)]
+    for(i in 1:length(rownames(all_gos))){
+      all_gos <- rbind(all_gos,g[which(g$match==as.character(all_gos[i,1])),c(1,2,8)])
+      all_gos <- rbind(all_gos,g[which(g$match==as.character(all_gos[i,2])),c(1,2,8)])
+    }
+    # Get number of genes for each group
+    genes <- g[which(g$match==go),9]
+    genes2 <- NULL
+    for(genel in genes){
+      genes2 <- c(genes2,strsplit(genel,","))
+    }
+    # Set column for number of genes
+    go_groups[which(go_groups$GOgroup == go),12] <- length(unique(unlist(genes2)))
+    # Set column for genes
+    go_groups[[which(go_groups$GOgroup == go),13]] <- list(unique(unlist(genes2)))
+    # for the circos plot, we want a seperate list of or df of only the top 10 most significant GOs per group
+    top_list <- NULL
+    # Therefor order all_gos on fisher exact weight value and select the top 10
+    for(i in unique(all_gos$GO.ID)){
+      s <- all_gos[which(all_gos$GO.ID == i),]
+      r1 <- s[order(s$weight),][1,c(1,3)]
+      r2 <- s[order(s$weight),][1,c(2,3)]
+      colnames(r2) <- colnames(r1)
+      top_list <- rbind(top_list, r1, r2)
+    }
+    o <- unique(top_list[order(top_list$weight),]$GO.ID)
+    for(i in 1:length(o)){
+      if(i > 10) break()
+      else go_groups[which(go_groups$GOgroup == go),i+1] <- as.character(o[i])
+    }
+    
+  }
+  # the 3 EAE scores that are compared in the circosplot to control
+  tests <- c("c1","c4","cch")
+  # Get the number of genes per GO group for each test and total (list of data frames)
+  go_group.list <- lapply(1:length(rownames(go_groups)),function(i){
+    c1 <- counting(go_groups[i,13], pr[[1]][1])
+    c4 <- counting(go_groups[i,13],pr[[1]][2])
+    cch <- counting(go_groups[i,13],pr[[1]][3])
+    df2 <- data.frame(go_groups = go_groups[i,1], c1 = c1, c4 = c4, cch = cch, total = c1+c4+cch)
+  })
+  # Bind the dataframes together by row
+  rdf <- do.call(rbind,go_group.list)
+  # Get total for each test as wel (colSums)
+  cs <- colSums(rdf[,2:4])
+  rdf[length(rownames(rdf))+1,] <- NA
+  for(i in names(cs)){
+    rdf[length(rownames(rdf)),i] <- cs[i]
+  }
+  # Make a proportional data frame to be used for making the circos plot proportions.
+  tdf = NULL
+  for(type in tests) {
+    for(s in d3Gos) {
+      l = rdf[[1]] == s
+      n = sum(l)
+      n = 1
+      dd = data.frame(type = rep(type, n),
+                      species = rep(s, n),
+                      vaule1 = rdf[which(rdf$go_groups==s), type]/rdf[which(rdf$go_groups==s),"total"],
+                      value2 = rdf[which(rdf$go_groups==s),type]/rdf[length(rownames(rdf)),type])
+      tdf = rbind(tdf, dd)
+    }
+  }
+  # Initialize circos_plotter.R and write to pdf.
+  pdf(file = paste("Results/",prefix,"/",direction,"circos.pdf",sep=""))
+  circler(tdf, go_groups, tests)
+  dev.off()
+  
+  return(go_groups)
+}
+
+
+counting <- function(genes, l){
+  # Function for counting the number of genes matching between GO group and test
+  genes <- unlist(genes)
+  l <- unlist(l)
+  count <- 0
+  for(i in genes){
+    if(i %in% l){
+      count <- count + 1
+    }
+  }
+  return(count)
+}
+
+
+get.genes <- function(file_list){
+  #open dea files to find all degs
+  #convert deg from ensemble to gene names
+  dea.prefixs <- unlist(lapply(file_list,function(i)lapply(strsplit(i,"/"), function(u)gsub(".csv","",u[4]))))
+  dea.files <- paste("Results/FDR001_logFC1_all/DEA_Results/de_genes_",prefix,"_",dea.prefixs,".txt",sep="")
+  dea <- lapply(dea.files, read.delim, sep="\t", header=T)
+  test <- lapply(dea,ens2symbol)
+  return(list(test,dea.prefixs))
+}
+
+ens2symbol <- function(dea){
+  # Function that converts ensembl gene ids to entrez gene ids and then to hgnc gene symbols
+  # returns the gene names
+  ens.genes <- dea$ensembl_gene_id
+  enz.genes <- ens2eg(ens.genes)
+  names.genes <- lapply(enz.genes,function(g){getSYMBOL(g,data='org.Mm.eg')})
+  names.genes <- lapply(names.genes,function(g){paste(g,collapse=",")})
+  names.genes <- unlist(names.genes)
+  names.genes <- unique(names.genes)
+  
+  return(names.genes)
+}
 ####################################################################
 #                              CODE                                #
 ####################################################################
@@ -280,13 +413,20 @@ filelist <- list(
 # Mouse database
 mmGO <- godata('org.Mm.eg.db', ont="BP")
 
-# g <- main(filelist[[1]])
+# To make sure that the gene symbols of the Ensembl id's are known,
+# a txt file is used of a gtf file (used during the alignment).
+geneExp <- read.csv(file = "RawFiles/Mus_musculus.GRCm38.85.txt", sep=";", header=F, col.names = paste0("V",seq_len(20)),
+                    fill = T, na.strings=c("","NA"), stringsAsFactors = F)
+# Only the gene id (ensemble id) and the gene name (genesymbol) was
+# obtained from this file.
+geneNames <- cbind(gsub("gene_id ", "", as.matrix(geneExp[,1])), gsub("gene_name ", "", as.matrix(geneExp[,5])),
+                   trimws(apply(geneExp, 1, function(x) tail(na.omit(x), 1))))
+gene_names <- as.data.frame(unique(geneNames[,1:2]))
+colnames(gene_names) <- c("ensembl_gene_id", "external_gene_name")
+
+# g <- main(filelist[[2]])
 
 # Run main function for each list of files
 groups <- lapply(filelist, function(fl){
-  # print(fl)
   main(fl)
-  # print(levels(main(fl)$GO_group_id))
 })
-levels(as.factor(groups[[1]][["GO_group_id"]])) #of down regulated genes
-levels(as.factor(groups[[2]][["GO_group_id"]])) #of up regulated genes
