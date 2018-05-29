@@ -127,7 +127,7 @@ mgetMinimumSubsumer2 <- function(df){
   # initiate both old and new skiplist (old has 1 element for them to not be of the same length initially)
   skiplist <- c("empty")
   skiplist_new <- c()
-  # while loop to go use getminimumsubsumer recursively (change 10 to something less hardcoded)
+  # while loop to go use getminimumsubsumer recursively (change 3 to something less hardcoded)
   while(depth < 3){
     depth <- depth + 1
     # Break out of loop if no new matches are made before a depth of 3 has been reached
@@ -238,8 +238,8 @@ recursive_mgetMinimumSubsumer <- function(df, depth, skiplist){
 go_gene_relinking <- function(gos,genes){
   colnames(gos)[1] <- "GO.ID"
   df <- merge(gos,genes,by="GO.ID")
-  print(dim(gos))
-  print(str(genes))
+  # print(dim(gos))
+  # print(str(genes))
   return(df)
 }
 
@@ -249,9 +249,7 @@ gene_deduplication <- function(df){
   member_list <- c()
   for(i in 1:length(rownames(df))){
     GOid <- as.character(df[i,]$GO.ID)
-    # print(as.character(GOid))
     genes <- unlist(strsplit(as.character(df[i,]$genes), ","))
-    # print(genes)
     if(GOid %in% member_list){
       nl[[GOid]] <- unique(c(nl[[GOid]],genes))
     }
@@ -271,7 +269,10 @@ gene_deduplication <- function(df){
 
 
 go_grouper <- function(g, file_list){
-  d3Gos <- c(levels(as.factor(as.character(g[which(g$depth==3),]$match))),"GO:0008150")
+  if(length(g[which(g$depth==3)]$match)<2){
+    max_depth <- 2
+  }else max_depth <- 3
+  d3Gos <- c(levels(as.factor(as.character(g[which(g$depth==max_depth),]$match))),"GO:0008150")
 
   # data.frame object with 11 columns, first column is the different go_groups and the other 10 are the top 10 GO's matched to the group
   # NAs are initiated for when a group has less than 10 GO's matched
@@ -353,7 +354,7 @@ go_grouper <- function(g, file_list){
   }
   # Initialize circos_plotter.R and write to pdf.
   pdf(file = paste("Results/",prefix,"/",direction,"circos.pdf",sep=""))
-  circler(tdf, go_groups, tests)
+  circler(g, d3Gos, tdf, go_groups, tests)
   dev.off()
   
   return(go_groups)
@@ -378,7 +379,7 @@ get.genes <- function(file_list){
   #open dea files to find all degs
   #convert deg from ensemble to gene names
   dea.prefixs <- unlist(lapply(file_list,function(i)lapply(strsplit(i,"/"), function(u)gsub(".csv","",u[4]))))
-  dea.files <- paste("Results/FDR001_logFC1_all/DEA_Results/de_genes_",prefix,"_",dea.prefixs,".txt",sep="")
+  dea.files <- paste("Results/",prefix,"/DEA_Results/de_genes_",prefix,"_",dea.prefixs,".txt",sep="")
   dea <- lapply(dea.files, read.delim, sep="\t", header=T)
   test <- lapply(dea,ens2symbol)
   return(list(test,dea.prefixs))
@@ -401,7 +402,9 @@ ens2symbol <- function(dea){
 ####################################################################
 '%ni%' <- Negate('%in%')  # Easy to use reverse of the %in% function (not in)
 
-go_results <- "Results/FDR001_logFC1_all/GO_Results/"
+# prefix <- "FDR005_logFC1_all"
+go_results <- paste("Results/",prefix,"/GO_Results/",sep="")
+group_results <- gsub("GO_Results/","",go_results)
 similarity <- 0.6  # Current threshold for GO term similarity
 
 # A list containing lists of files that contain GOs that need to be grouped together
@@ -424,9 +427,19 @@ geneNames <- cbind(gsub("gene_id ", "", as.matrix(geneExp[,1])), gsub("gene_name
 gene_names <- as.data.frame(unique(geneNames[,1:2]))
 colnames(gene_names) <- c("ensembl_gene_id", "external_gene_name")
 
-# g <- main(filelist[[2]])
+#  
 
 # Run main function for each list of files
 groups <- lapply(filelist, function(fl){
   main(fl)
 })
+
+for(i in 1:2){
+  if(i==1){
+    direct <- "down"
+  }else if(i==2){
+    direct <- "up"
+  } 
+  write.csv(groups[i], paste(group_results, direct, "_groups.csv",sep=""))
+}
+write.csv(i, paste(go_results, "groups.csv",sep=""))
