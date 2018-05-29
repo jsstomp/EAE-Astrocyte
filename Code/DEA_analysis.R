@@ -30,11 +30,11 @@ analyzer <- function(filenames, region) {
   result <- lapply(filenames, read.delim, sep="\t", header=T)
   result <- do.call(rbind, result)
   # sort by adjusted p-value ascending and remove duplicates with least significant adjusted p-value
+  str(result$ensembl_gene_id)
   aa <- result[order(result$ensembl_gene_id, abs(result$padj) ), ]  #sort by id ascending from absolute of adjusted p-value
   result <- aa[ !duplicated(aa$ensembl_gene_id), ]  #take first row within each id
   # merge result with genename dataset to get the corrosponding gene name for each ensembl id
   m <- merge(result, gene_names, by="ensembl_gene_id")
-  # print(colnames(m))
   write(m$external_gene_name,file=paste("Results/", prefix,"/genes_", region, ".txt",sep=""))
   # perpare countdata for heatmapping
   if(region=="all"){
@@ -53,6 +53,12 @@ analyzer <- function(filenames, region) {
   # calculate the number of clusters using the Calinski-Harabasz index
   nb <- pamk(e, krange = 3:8, criterion = "ch", usepam = T)
   nc <- nb$nc
+  
+  mycols <- list(Group = c(C_HB_A = 'darkviolet', E4_HB_A = 'darkorchid', Ech_HB_A = 'deeppink', E1_HB_A = 'hotpink', C_HB_AG = 'navy',
+                           E1_HB_AG = 'royalblue', E4_HB_AG = 'darkcyan', Ech_HB_AG = 'deepskyblue', C_SC_A = 'yellow', E1_SC_A = 'gold',
+                           E4_SC_A = 'gold3', Ech_SC_A = 'orangered'),
+                 cluster = colorRampPalette(c("cadetblue" , "hotpink", "navy", "orangered", "gold", "darkviolet"))(n=nc))
+  
   # make an initial pheatmap object to use for defining clusters of genes
   pdf(file = NULL) # null pdf to avoid pheatmap from sending this to a file
   pres <- pheatmap(e, scale = "row", annotation = annotation, annotation_colors = mycols, col = hmcol, fontsize_row = 0.05, fontsize_col = 6)
@@ -62,14 +68,11 @@ analyzer <- function(filenames, region) {
   pres.clust <- as.data.frame(unlist(pres.clust[,2]))
   # Set clusters to colorcodes as requested by bioligist
   result$cluster <- pres.clust[order(rownames(pres.clust)),]
-  result$cluster[result$cluster==1] <- "#ff5300"
-  result$cluster[result$cluster==2] <- "#3f5eba"
-  result$cluster[result$cluster==3] <- "#e9003a"
-  result$cluster[result$cluster==4] <- "#56c7e9"
-  result$cluster[result$cluster==5] <- "#006633"
-  result$cluster[result$cluster==6] <- "#955659"
-  result$cluster[result$cluster==7] <- "#14e337"
-  result$cluster[result$cluster==8] <- "#ff73f9"
+  for(i in 1:nc){
+    print(mycols[["cluster"]][i])
+    result$cluster[result$cluster==i] <- mycols[["cluster"]][i]
+  }
+  
   # Write results to csv file (per region) to be used by biologist
   write.csv(result, file = paste("Results/",prefix,"/de_genes_",gsub("_","",region),".csv", sep=""))
   colnames(pres.clust) <- c("cluster")
@@ -129,8 +132,6 @@ for(files in list(file_list,HBA_list,HBAG_list,SCA_list)){
   }
   cat(paste("Start analysis for: ", gsub("_","",region), ".\n", sep=""))
   count = count + 1
-  # print(str(as.vector(files)))
-  # print(str(region))
   suppressWarnings(analyzer(files, region ))
   cat("\tdone!\n")
 }
