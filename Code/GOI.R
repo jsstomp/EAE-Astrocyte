@@ -40,7 +40,7 @@ topGOing <- function(file_name, dea_name){
   geneList <- factor(as.integer (all_genes %in% my.ezmusg))
   names(geneList) <- all_genes
   #write genes
-  writeGenes(my.ezmusg,dea_name)
+  # writeGenes(my.ezmusg,dea_name)
   cat("Building topGO object, this may take several minutes please wait...\t")
   # Build the topGO object, look only for Biological Process GOs in mouse
   GOdata <- new("topGOdata",
@@ -164,3 +164,4 @@ all_genes <- ens2eg(rownames(countData))
 
 # Start main
 suppressWarnings(suppressMessages(sapply(file_list,main)))
+source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/GO_grouper.R")
