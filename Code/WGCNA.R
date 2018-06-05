@@ -36,7 +36,7 @@ powers = c(c(1:10), seq(from = 12, to=20, by=2));
 sft=pickSoftThreshold(datExpr,dataIsExpr = TRUE,powerVector = powers,corFnc = cor,corOptions = list(use = 'p'),networkType = "unsigned")
 
 #plot results
-sizeGrWindow(9, 5)
+# sizeGrWindow(9, 5)
 par(mfrow = c(1,2));
 cex1 = 0.9;
 
@@ -51,6 +51,7 @@ abline(h=0.9,col="red")
 plot(sft$fitIndices[,1], sft$fitIndices[,5],xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
+# power of 5 doubled due to signed network
 softPower <- 10
 
 adj <- adjacency(datExpr,type = "signed",power=softPower)
@@ -88,37 +89,6 @@ plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut", dendroLabels = 
 sizeGrWindow(10,5)
 plotDendroAndColors(geneTree, colors=data.frame(staticColors, dynamicColors, hybridColors), dendroLabels = FALSE,
                     marAll = c(1,8,3,1), main = "Gene dendrogram and module colors, TOM dissimilarity")
-# 
-# 
-# 
-# 
-# # Here are input parameters of the simulation model
-# # number of samples or microarrays in the training data
-# no.obs=66
-# # now we specify the true measures of eigengene significance
-# ESturquoise=0; ESbrown= -.6;
-# ESgreen=.6;ESyellow=0; ESred=0
-# # number of genes
-# nGenes1=12251
-# # proportion of genes in the turquoise, blue, brown, green, and yellow module #respectively.
-# simulateProportions1=round(summary(as.factor(dynamicColors))/nGenes1,2)
-# 
-# # set the seed of the random number generator. As a homework exercise change this seed.
-# set.seed(1)
-# #Step 1: simulate a module eigengene network.
-# # Training Data Set I
-# MEgreen=rnorm(no.obs)
-# scaledy=MEgreen*ESgreen+sqrt(1-ESgreen^2)*rnorm(no.obs)
-# y=ifelse( scaledy>median(scaledy),2,1)
-# MEturquoise= ESturquoise*scaledy+sqrt(1-ESturquoise^2)*rnorm(no.obs)
-# # we simulate a strong dependence between MEblue and MEturquoise
-# MEblue= .6*MEturquoise+ sqrt(1-.6^2) *rnorm(no.obs)
-# MEbrown= .6*MEgreen+ sqrt(1-.6^2) *rnorm(no.obs)
-# MEyellow= ESyellow*scaledy+sqrt(1-ESyellow^2)*rnorm(no.obs)
-# MEred= ESred*scaledy+sqrt(1-ESred^2)*rnorm(no.obs)
-# ModuleEigengeneNetwork1=data.frame(y,MEturquoise,MEblue,MEbrown,MEgreen, MEyellow)
-# 
-# signif(cor(ModuleEigengeneNetwork1, use="p"),2)
 
 ### CONSENSUS ANALYSIS ###
 traitData <- read.csv("~/Projects/EAE/RawFiles/target.csv")
@@ -164,11 +134,11 @@ plotMEpairs(datME)#, y=ModuleEigengeneNetwork1$y)
 # signif(cor(datME,ModuleEigengeneNetwork1[,-1]),2)
 
 par(mfrow=c(3,1), mar=c(1, 2, 4, 1))
+######################################################################################
 which.module="turquoise";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=T,rcols=which.module,
         title=which.module )
-# for the second (blue) module we use
 which.module="green";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=T,rcols=which.module,
@@ -178,15 +148,30 @@ plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=T,rcols=which.module,
         title=which.module )
 
-which.module="blue"
-ME=datME[, paste("ME",which.module, sep="")]
-par(mfrow=c(2,1), mar=c(0.3, 5.5, 3, 2))
-plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),
-        nrgcols=30,rlabels=F,rcols=which.module,
-        main=which.module, cex.main=2)
-par(mar=c(5, 4.2, 0, 0.7))
-barplot(ME, col=which.module, main="", cex.main=2,
-        ylab="eigengene expression",xlab="array sample")
+which.module="red";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=T,rcols=which.module,
+        title=which.module )
+which.module="yellow";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=T,rcols=which.module,
+        title=which.module )
+which.module="blue";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=T,rcols=which.module,
+        title=which.module )
+######################################################################################
+
+for (module in names(table(dynamicColors))){
+  ME=datME[, paste("ME",module, sep="")]
+  par(mfrow=c(2,1), mar=c(0.3, 5.5, 3, 2))
+  plotMat(t(scale(datExpr[,dynamicColors==module ]) ),
+          nrgcols=30,rlabels=F,rcols=module,
+          main=module, cex.main=2)
+  par(mar=c(5, 4.2, 0, 0.7))
+  barplot(ME, col=module, main="", cex.main=2,
+          ylab="eigengene expression",xlab="array sample")
+  }
 
 signif(cor(y,datME, use="p"),2)
 cor.test(y, datME$MEbrown)
@@ -204,7 +189,6 @@ plotModuleSignificance(GeneSignificance,dynamicColors,2)
 
 ################USERLISTENRICHMENT####################
 # Get dataframe of genes and their linked modules
-str(dds)
 genes <- dds@rowRanges@partitioning@NAMES
 
 # To make sure that the gene symbols of the Ensembl id's are known,
@@ -229,45 +213,51 @@ listGenes <- trimws(toupper(as.character(uniqueFilteredGeneModules[,2])))
 
 categories <- as.character(uniqueFilteredGeneModules[,3])
 
-enrichmentResults <- userListEnrichment(listGenes, categories,nameOut = "testUserListEnrichment.csv",useBrainLists = T,useBloodAtlases = T,
-                   useStemCellLists = T, useBrainRegionMarkers = T, useImmunePathwayLists = T, usePalazzoloWang = T, omitCategories = "grey")
+enrichmentResults <- userListEnrichment(listGenes, categories,nameOut = "testGenesUserListEnrichment.csv",useBrainLists = T,useBloodAtlases = T,
+                   useStemCellLists = T, useBrainRegionMarkers = T, useImmunePathwayLists = T, usePalazzoloWang = T, omitCategories = "grey", outputGenes = T)
 
 ###################NETWORK VISUALISATION########################
-hubs <- chooseTopHubInEachModule(datExpr, dynamicColors, omitColors = "grey",
-                                 power=5, type = "signed")
-# The ensemble id will be converted into the gene name after that.
-dfHubs <- data.frame(ensembl_gene_id = as.character(hubs), module = as.character(names(hubs)))
-
-hubs <- merge(dfHubs,gene_names,by="ensembl_gene_id")
-
-# The idea of this part in the code it to make a file that can be
-# used in VisANT. Each of the genes that are avaiable in the 
-# M2 dataset are saved as probes.
-probes <- colnames(datExpr)
-
-# Each module is used in this function.
-for (module in names(table(dynamicColors))){
-  # The right module is selected.
-  inModule <- dynamicColors==module
-  # The probes that are available for the module is saved as modProbes.
-  modProbes <- probes[inModule]
-  # The distances among the genes within a module are saved into modTOM
-  modTOM <- TOM[inModule, inModule]
-  dimnames(modTOM) <- list(modProbes, modProbes)
-  # The function exportNetworkToVisant makes sure that the available data 
-  # is saved into a txt file in a way that it can be used into VisANT.
-  exportNetworkToVisANT(modTOM, file= paste("VisOutput/VisANTInput-", module, ".txt", sep=""),
-  weighted = T, threshold = 0, probeToGene = data.frame(trimws(as.character(uniqueFilteredGeneModules[,1])), listGenes))
-  
-  # softConnectifity calculated the connectivity of each node that are found 
-  # within one module. This data will be saved in to the dataframe IMConn
-  IMConn <- softConnectivity(datExpr[, modProbes])
-  # The top 30 genes within this dataset are saved.
-  top <- rank(-IMConn) <= 50
-  # And a file that is saved.
-  exportNetworkToVisANT(modTOM[top, top], file= paste("VisOutput/VisANTInput-", module, "-top50.txt", sep=""),
-                        weighted = T, threshold = 0, probeToGene = data.frame(trimws(as.character(uniqueFilteredGeneModules[,1])), listGenes))
-}
-# Directory is set to save the environment since some steps like
-# calculation the TOM takes a lot of time.
-save.image()
+# hubs <- chooseTopHubInEachModule(datExpr, dynamicColors, omitColors = "grey",
+#                                  power=5, type = "signed")
+# # The ensemble id will be converted into the gene name after that.
+# dfHubs <- data.frame(ensembl_gene_id = as.character(hubs), module = as.character(names(hubs)))
+# 
+# hubs <- merge(dfHubs,gene_names,by="ensembl_gene_id")
+# 
+# # The idea of this part in the code it to make a file that can be
+# # used in VisANT. Each of the genes that are avaiable in the 
+# # M2 dataset are saved as probes.
+# probes <- colnames(datExpr)
+# 
+# # Each module is used in this function.
+# for (module in names(table(dynamicColors))){
+#   # The right module is selected.
+#   inModule <- dynamicColors==module
+#   # The probes that are available for the module is saved as modProbes.
+#   modProbes <- probes[inModule]
+#   # The distances among the genes within a module are saved into modTOM
+#   modTOM <- TOM[inModule, inModule]
+#   dimnames(modTOM) <- list(modProbes, modProbes)
+#   # The function exportNetworkToVisant makes sure that the available data 
+#   # is saved into a txt file in a way that it can be used into VisANT.
+#   # exportNetworkToVisANT(modTOM, file= paste("VisOutput/VisANTInput-", module, ".txt", sep=""),
+#   # weighted = T, threshold = 0, probeToGene = data.frame(trimws(as.character(uniqueFilteredGeneModules[,1])), listGenes))
+#   exportNetworkToCytoscape(modTOM, edgeFile= paste("VisOutput/CytoscapeInput-", module, "-edge.txt", sep=""),
+#                            nodeFile= paste("VisOutput/CytoscapeInput-", module, "-node.txt", sep=""),
+#                            weighted = T, threshold = 0.02, nodeAttr=module)
+#   # softConnectifity calculated the connectivity of each node that are found 
+#   # within one module. This data will be saved in to the dataframe IMConn
+#   IMConn <- softConnectivity(datExpr[, modProbes])
+#   # The top 30 genes within this dataset are saved.
+#   top <- rank(-IMConn) <= 30
+#   # And a file that is saved.
+#   # print(head(modTOM[top,top]))
+#   # exportNetworkToVisANT(modTOM[top, top], file= paste("VisOutput/VisANTInput-", module, "-top50.txt", sep=""),
+#   #                       weighted = T, threshold = 0, probeToGene = data.frame(trimws(as.character(uniqueFilteredGeneModules[,1])), listGenes))
+#   exportNetworkToCytoscape(modTOM[top, top], edgeFile= paste("VisOutput/CytoscapeInput-", module, "-edge-top50.txt", sep=""),
+#                            nodeFile= paste("VisOutput/CytoscapeInput-", module, "-node-top50.txt", sep=""),
+#                            weighted = T, threshold = 0.02, nodeAttr=module)
+# }
+# # Directory is set to save the environment since some steps like
+# # calculation the TOM takes a lot of time.
+# save.image()
