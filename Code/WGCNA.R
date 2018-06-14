@@ -22,8 +22,8 @@ smyth <- smyth[,which(colnames(smyth) %in% rownames(colData))]
 # countMatrix <- smyth[which(rownames(smyth) %in% de_genes_SCA),]
 
 ddsMat <- DESeqDataSetFromMatrix(smyth,
-                              colData,
-                              design = ~ Group)
+                                 colData,
+                                 design = ~ Group)
 dds<-DESeq(ddsMat)
 datExpr0<- assay(dds)
 
@@ -116,8 +116,9 @@ plotDendroAndColors(sampleTree2, traitColors, groupLabels = names(datTraits), ma
 ########### eigengene significance
 
 # Calculate the module eigengenes (1st PC) of modules in the dataset
-datME <- moduleEigengenes(datExpr,dynamicColors)$eigengenes
-signif(cor(datME, use="p"), 2)
+datME <- moduleEigengenes(datExpr,dynamicColors, softPower = 10)$eigengenes
+module_correlation <- signif(cor(datME, use="p"), 2)
+write.csv(module_correlation, "~/Projects/EAE/Results/WGCNA_results/module_correlation.csv")
 
 # We  define  a  dissimilarity  measure  between  the  module  eigengenes  that  keeps  track  of  the  sign  of  the  correlation
 # between the module eigengenes, and use it to cluster the eigengene:
@@ -129,63 +130,156 @@ par(mfrow=c(1,1))
 plot(hclustdatME, main="Clustering tree based of the module eigengenes")
 
 # sizeGrWindow(8,9)
-plotMEpairs(datME)#, y=ModuleEigengeneNetwork1$y)
+plotMEpairs(datME)
 
-# signif(cor(datME,ModuleEigengeneNetwork1[,-1]),2)
+# get the actual hub genes
+hubs <- chooseTopHubInEachModule(datExpr = datExpr, dynamicColors,omitColors = "grey",power = 10, type = "signed")
+write.csv(as.data.frame(hubs), "~/Projects/EAE/Results/WGCNA_results/hub_genes.csv")
 
-par(mfrow=c(3,1), mar=c(1, 2, 4, 1))
+# Gene module significance per module for the different conditions
+GS1 <- as.numeric(cor(datExpr, factor(as.data.frame(datTraits.numeric)$Group), use="p"))
+GS2 <- as.numeric(cor(datExpr, factor(as.data.frame(datTraits.numeric)$Population), use="p"))
+GS3 <- as.numeric(cor(datExpr, factor(as.data.frame(datTraits.numeric)$Region), use="p"))
+GS4 <- as.numeric(cor(datExpr, factor(as.data.frame(datTraits.numeric)$Condition), use="p"))
+GeneSignificance1 <- abs(GS1)
+GeneSignificance2 <- abs(GS2)
+GeneSignificance3 <- abs(GS3)
+GeneSignificance4 <- abs(GS4)
+par(mfrow = c(1,1),mar=c(5.1, 4.1, 4.1, 2.1))
+plotModuleSignificance(GeneSignificance1,dynamicColors)
+pdf("~/Projects/EAE/Results/WGCNA_results/gene_significance.pdf")
+par(mfrow = c(2,2),mar=c(5.1, 4.1, 4.1, 2.1))
+plotModuleSignificance(GeneSignificance1,dynamicColors, main= "Groups")
+plotModuleSignificance(GeneSignificance2,dynamicColors, main= "Population")
+plotModuleSignificance(GeneSignificance3,dynamicColors, main= "Region")
+plotModuleSignificance(GeneSignificance4,dynamicColors, main= "EAE score")
+dev.off()
+
+# most interconnected genes (leaded by hubgene)
+datKME <- signedKME(datExpr, datME, outputColumnName="MM.")
+# Display the first few rows of the data frame
+head(datKME)
+table(listGenes[abs(datKME$MM.red)>.8])
+
+
+FilterGenes= abs(GS1)> .2 & abs(datKME$MM.green)>.8
+table(FilterGenes)
+# test <- trimws(as.character(filteredGeneModules$external_gene_name[FilterGenes]))
+# which(trimws(as.character(filteredGeneModules$external_gene_name))=="Tmem47")
+# filteredGeneModules[6485,]
+# datKME[6485,]
+# datKME[order(datKME$MM.green, decreasing = T),]
+# which(rownames(datKME) == "ENSMUSG00000025666")
+
+# datKME_blue <- colnames(datExpr)[order(datKME$MM.blue)][1:50]
+datKME_blue <- data.frame(ensemble_gene_id = colnames(datExpr)[order(datKME$MM.blue, decreasing = T)][1:50],
+                          gene_name = filteredGeneModules$external_gene_name[order(datKME$MM.blue, decreasing = T)][1:50],
+                          gene_connectivity = datKME$MM.blue[order(datKME$MM.blue, decreasing = T)][1:50],
+                          module = "blue")
+
+head(datKME_blue)
+
+# Connectivity within modules 
+ADJ1=abs(cor(datExpr,use="p"))^10
+Alldegrees1=intramodularConnectivity(ADJ1, dynamicColors)
+head(Alldegrees1)
+
+par(mfrow=c(2,3))
+# We choose 4 modules to plot: turquoise, blue, brown, green.
+# For simplicity we write the code out explicitly for each module.
+which.color="turquoise";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+which.color="blue";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+which.color="brown";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+which.color="red";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+which.color="yellow";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+which.color="green";
+restrictGenes=dynamicColors==which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+                   (datKME[restrictGenes, paste("MM.", which.color, sep="")])^6,
+                   col=which.color,
+                   xlab="Intramodular Connectivity",
+                   ylab="(Module Membership)^6")
+
+
 ######################################################################################
+pdf("~/Projects/EAE/Results/WGCNA_results/heatmap_modules_turq-gr-brwn.pdf")
+par(mfrow=c(3,1), mar=c(1, 2, 7, 1), ps=16)
 which.module="turquoise";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module, cex.axis=1.5)
+title(which.module, line=6)
 which.module="green";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
 which.module="brown";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
+dev.off()
 
+pdf("~/Projects/EAE/Results/WGCNA_results/heatmap_modules_red-yel-blu.pdf")
+par(mfrow=c(3,1), mar=c(1, 2, 7, 1), ps=16)
 which.module="red";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
 which.module="yellow";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
 which.module="blue";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=T,rcols=which.module,
-        title=which.module )
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
+dev.off()
 ######################################################################################
 
 for (module in names(table(dynamicColors))){
   ME=datME[, paste("ME",module, sep="")]
-  par(mfrow=c(2,1), mar=c(0.3, 5.5, 3, 2))
+  #png(paste("~/Projects/EAE/Results/WGCNA_results/heat_bar_",module,".png",sep=""))
+  par(mfrow=c(2,1), mar=c(0.3, 5.5, 6, 2))
   plotMat(t(scale(datExpr[,dynamicColors==module ]) ),
-          nrgcols=30,rlabels=F,rcols=module,
-          main=module, cex.main=2)
+          nrgcols=30,rlabels=F,rcols=module, clabels=colnames(t(scale(datExpr[,dynamicColors==module ]) )),
+          cex.main=2)
+  title(module, line=5)
   par(mar=c(5, 4.2, 0, 0.7))
   barplot(ME, col=module, main="", cex.main=2,
           ylab="eigengene expression",xlab="array sample")
+  #dev.off()
   }
 
-signif(cor(y,datME, use="p"),2)
-cor.test(y, datME$MEbrown)
 
-p.values = corPvalueStudent(cor(y,datME, use="p"), nSamples = length(y))
-
-# Calculating average module significance
-GS1=as.numeric(cor(y,datExpr, use="p"))
-GeneSignificance=abs(GS1)
-# Next module significance is defined as average gene significance.
-ModuleSignificance=tapply(GeneSignificance, dynamicColors, mean, na.rm=T)
-
-par(mfrow = c(1,1),mar=c(5.1, 4.1, 4.1, 2.1))
-plotModuleSignificance(GeneSignificance,dynamicColors,2)
 
 ################USERLISTENRICHMENT####################
 # Get dataframe of genes and their linked modules
@@ -203,8 +297,8 @@ gene_names <- as.data.frame(unique(geneNames[,1:2]))
 colnames(gene_names) <- c("ensembl_gene_id", "external_gene_name")
 
 geneModule <- data.frame(ensembl_gene_id = genes, module = dynamicColors)
-geneModule <- merge(gene_names,geneModule,by="ensembl_gene_id")
-geneModuleData <- geneModule[order(geneModule[,2]),1:3]
+geneModuleM <- merge(gene_names,geneModule,by="ensembl_gene_id")
+geneModuleData <- geneModuleM[match(geneModule$ensembl_gene_id,geneModuleM$ensembl_gene_id),]
 filteredGeneModules <- na.omit(geneModuleData)
 
 uniqueFilteredGeneModules <- filteredGeneModules[ !duplicated(filteredGeneModules$external_gene_name), ]  #take first row within each id
@@ -213,8 +307,33 @@ listGenes <- trimws(toupper(as.character(uniqueFilteredGeneModules[,2])))
 
 categories <- as.character(uniqueFilteredGeneModules[,3])
 
+gene_df <- data.frame(genes=listGenes,module=categories)
+gene_df <- gene_df[order(gene_df$module),]
+write.csv(gene_df, "~/Projects/EAE/Results/WGCNA_results/gene_per_module.csv")
+
+datKME <- datKME[-which(duplicated(filteredGeneModules$external_gene_name))]
+datKME_blue <- listGenes[order(datKME$MM.blue, decreasing = F)][1:50]
+
 enrichmentResults <- userListEnrichment(listGenes, categories,nameOut = "testGenesUserListEnrichment.csv",useBrainLists = T,useBloodAtlases = T,
                    useStemCellLists = T, useBrainRegionMarkers = T, useImmunePathwayLists = T, usePalazzoloWang = T, omitCategories = "grey", outputGenes = T)
+
+################################################################
+# top 50 genes based on connectivity per module
+
+#top50Finder <- function(module){
+attach(datKME)
+df_list <- lapply(unique(categories),function(module){
+  df <- assign(paste("datKME",module,sep="_"),data.frame(
+    ensemble_gene_id = filteredGeneModules$ensembl_gene_id[order(get(paste("MM.",module,sep="")), decreasing = T)][1:50],
+    gene_name = trimws(filteredGeneModules$external_gene_name[order(get(paste("MM.",module,sep="")), decreasing = T)][1:50]),
+    gene_connectivity = round(get(paste("MM.",module,sep=""))[order(get(paste("MM.",module,sep="")), decreasing = T)][1:50], 3),
+    module = module))
+  return(df)
+})
+detach()
+
+lapply(df_list,function(df)write.csv(df,paste("~/Projects/EAE/Results/WGCNA_results/top50genes_",df$module[1], ".csv",sep=""),quote = F, row.names = F))
+head(datKME_blue)
 
 ###################NETWORK VISUALISATION########################
 # hubs <- chooseTopHubInEachModule(datExpr, dynamicColors, omitColors = "grey",
