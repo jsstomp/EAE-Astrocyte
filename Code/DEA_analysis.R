@@ -107,6 +107,8 @@ mycols <- list(Group = c(C_HB_A = 'darkviolet', E4_HB_A = 'darkorchid', Ech_HB_A
                cluster = (c("cadetblue" , "hotpink", "navy", "orangered", "gold", "darkviolet")))
 hmcol <- colorRampPalette(c("magenta", "dodgerblue2", "white", "tan3","firebrick3"))(n=99)
 
+write.csv(gene_names,"gene_names.csv")
+
 # Read input files and get nececary information
 countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
 ph_data <- read.table("Results/col_data.txt", header = T, row.names = 4, check.names = F)

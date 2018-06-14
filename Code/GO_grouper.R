@@ -397,6 +397,46 @@ ens2symbol <- function(dea){
   
   return(names.genes)
 }
+
+goIdToTerm <- function(x, names = TRUE, keepNA = TRUE) {
+  stopifnot(requireNamespace("GO.db"))
+  stopifnot(requireNamespace("AnnotationDbi"))
+  ans <- rep(NA_character_, length(x))
+  names(ans) <- x
+  ids <- AnnotationDbi::GOID(GO.db::GOTERM)
+  i <- match(x, ids)
+  k <- which(!is.na(i))
+  res <- AnnotationDbi::Term(GO.db::GOTERM[i[k]])
+  ans[k] <- res
+  if (!keepNA) ans[is.na(ans)] <- names(ans[is.na(ans)])
+  if (!names) names(ans) <- NULL
+  return(ans)
+}
+
+
+tableFormatter <- function(groups){
+  tier2 <- as.character(unique(groups[which(groups$depth==2),]$match))
+  cols_df <- c(tier2, goIdToTerm(tier2))
+  
+  df <- as.data.frame(matrix(nrow=100,ncol=length(tier2)*2))
+  colnames(df) <- cols_df
+  for(go in tier2){
+    tier1 <- as.character(unlist(groups[which(groups$match==go),2:3]))
+    tier0 <- NULL
+    for(got1 in tier1){
+      t0 <- as.character(unlist(groups[which(groups$match==got1),2:3]))
+      tier0 <- c(tier0, t0)
+    }
+    tier0 <- unique(tier0)
+    for(i in 1:length(tier0)){
+      df[i,go] <- tier0[i]
+      df[i,goIdToTerm(go)] <- goIdToTerm(tier0[i])
+    }
+    
+  }
+  df <- df[,unlist(lapply(1:length(tier2),function(i)seq(i,length(tier2)*2,length(tier2))))]
+  return(df)
+}
 ####################################################################
 #                              CODE                                #
 ####################################################################
@@ -434,6 +474,7 @@ groups <- lapply(filelist, function(fl){
   main(fl)
 })
 
+# Write files
 for(i in 1:2){
   if(i==1){
     direct <- "down"
@@ -442,4 +483,16 @@ for(i in 1:2){
   } 
   write.csv(groups[i], paste(group_results, direct, "_groups.csv",sep=""))
 }
-write.csv(i, paste(go_results, "groups.csv",sep=""))
+
+# reformat tables to human readable
+up_groups <- read.csv(paste(group_results,"up_groups.csv",sep=""))
+down_groups <- read.csv(paste(group_results,"down_groups.csv",sep=""))
+
+up_df <- tableFormatter(up_groups)
+down_df <- tableFormatter(down_groups)
+
+# write again
+write.csv(up_df, paste(group_results,"up_groups_table.csv",sep=""))
+write.csv(down_df, paste(group_results,"down_groups_table.csv",sep=""))
+
+
