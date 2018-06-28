@@ -69,7 +69,6 @@ analyzer <- function(filenames, region) {
   # Set clusters to colorcodes as requested by bioligist
   result$cluster <- pres.clust[order(rownames(pres.clust)),]
   for(i in 1:nc){
-    print(mycols[["cluster"]][i])
     result$cluster[result$cluster==i] <- mycols[["cluster"]][i]
   }
   

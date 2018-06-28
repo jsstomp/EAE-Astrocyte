@@ -1,10 +1,13 @@
+####################################################################
+# Author: Jafta Stomp
+# Date: 28-02-2018
+# Description: 
+#   script for building circos up plot crammed in 1 reusable function
+####################################################################
 
 circler <- function(g, d3Gos, df, go_groups,tests){
   # set colors for sectors
   col1 <- colorRampPalette(c("magenta", "dodgerblue3", "gray87", "tan1", "firebrick3")) (n=length(d3Gos))
-  # col1 = brewer.pal(length(d3Gos), "Set3")
-  print(length(d3Gos))
-  print(length(col1))
   names(col1) = d3Gos
   col2 = brewer.pal(3, "Set1")
   names(col2) = tests
@@ -12,8 +15,8 @@ circler <- function(g, d3Gos, df, go_groups,tests){
   df[[1]] = as.character(df[[1]])
   df[[2]] = as.character(df[[2]])
   
+  # sector set-up
   sector = NULL
-  
   sector_xlim = NULL
   for(t in unique(df[[1]])) {
     sector = c(sector, t)
@@ -23,8 +26,6 @@ circler <- function(g, d3Gos, df, go_groups,tests){
     sector = c(sector, t)
     sector_xlim = rbind(sector_xlim, c(0, sum(df[df[[2]] == t, 4])))
   }
-  
-  # Start if circos plot
   
   # Initiate the circos frame
   circos.par(cell.padding = c(0, 0, 0, 0), start.degree = 270, gap.degree = c(rep(1,length(tests)-1),10,rep(1,length(d3Gos)-1),10))
@@ -48,29 +49,6 @@ circler <- function(g, d3Gos, df, go_groups,tests){
     }
   }, bg.border = NA, track.height = 0.08)
   
-  # # Second track on the right side containing the names of the top 10 GOs for each GO group
-  # circos.trackPlotRegion(ylim = c(1, 10), panel.fun = function(x, y) {
-  #   sector.index = get.cell.meta.data("sector.index")
-  #   xlim = get.cell.meta.data("xlim")
-  #   ylim = get.cell.meta.data("ylim")
-  #   if(sector.index %in% sector[4:length(sector)]) {
-  #     l = unique(g[[3]]) == sector.index
-  #     # print(sum(l))
-  #     x = seq(0, by = 3, length = 1)
-  #     print(mean(xlim))
-  #     print(mean(x))
-  #     x = x + mean(xlim)
-  #     print(x)
-  #     s <- as.character(go_groups[which(go_groups$GOgroup==sector.index),2:11])
-  #     s <- s[!(is.na(s))]
-  #     # s <- s[2:length(s)]
-  #     print(s)
-  #     if(sector.index %in% sector[4:length(sector)]) {
-#       circos.text(rep(x[1], length(s)), seq_len(length(s)), s, cex = 0.6, facing = "bending.inside")
-#     }
-#   }
-# }, bg.border = NA, track.height = 0.2)
-
 # Third track full circle, right side GO group names again and on the left side the 3 tests
 circos.trackPlotRegion(ylim = c(0, 1), panel.fun = function(x, y) {
   sector.index = get.cell.meta.data("sector.index")

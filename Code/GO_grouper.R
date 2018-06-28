@@ -1,6 +1,6 @@
 ####################################################################
 # Author: Jafta Stomp
-# Date: 25-04-2018
+# Date: 28-06-2018
 # Description: 
 #   This script groups GO's together towards their first common ancestor
 #   and initiates circos_plotter.R to make a circos plot of genes and GOs
@@ -238,8 +238,6 @@ recursive_mgetMinimumSubsumer <- function(df, depth, skiplist){
 go_gene_relinking <- function(gos,genes){
   colnames(gos)[1] <- "GO.ID"
   df <- merge(gos,genes,by="GO.ID")
-  # print(dim(gos))
-  # print(str(genes))
   return(df)
 }
 
@@ -442,7 +440,6 @@ tableFormatter <- function(groups){
 ####################################################################
 '%ni%' <- Negate('%in%')  # Easy to use reverse of the %in% function (not in)
 
-# prefix <- "FDR005_logFC1_all"
 go_results <- paste("Results/",prefix,"/GO_Results/",sep="")
 group_results <- gsub("GO_Results/","",go_results)
 similarity <- 0.6  # Current threshold for GO term similarity

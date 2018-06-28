@@ -1,6 +1,6 @@
 ####################################################################
 # Author: Jafta Stomp
-# Date: 25-04-2018
+# Date: 28-06-2018
 # Description: 
 #   This script tries to identify Gene Ontology for a list of dea
 #   results. It does this using a package topGO using the fisher 
@@ -118,7 +118,6 @@ plot_GO <- function(go_table, dea_name){
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_blank(),axis.text=element_text(size=12))
   png(paste("Results/", prefix,"/GO_Results/", dea_name, ".png",sep=""), width=800, height=800)
-  print(gp)
   dev.off()
   cat("DONE\n")
 }
@@ -153,7 +152,6 @@ main <- function(path){
 ####################################################################
 #                               CODE                               #
 ####################################################################
-#prefix <- "FDR001_logFC1_all"
 # list files and read other files needed
 file_list <- list.files(paste("Results/", prefix,"/DEA_Results/", sep=""), full.names=T)
 countData <- read.table("Results/count_data_smith.txt", header = T, check.names = F)
@@ -165,3 +163,4 @@ all_genes <- ens2eg(rownames(countData))
 # Start main
 suppressWarnings(suppressMessages(sapply(file_list,main)))
 source("Experimental-autoimmune-encephalomyelitis-Astrocyte-RNA-seq-analysis/Code/GO_grouper.R")
+

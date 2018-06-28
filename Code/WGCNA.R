@@ -13,12 +13,19 @@ ph_data <- read.table("~/Projects/EAE/Results/col_data.txt", header = T, row.nam
 ph_data <- ph_data[which(ph_data$Sample.ID.Marissa %in% colnames(smyth)),]
 
 colnames(smyth) <- rownames(ph_data)
+
 colData <- ph_data[,4:6]
 colData$Group <- paste(colData$Condition, colData$Region, colData$Population, sep="_")
 
 # colData <- colData[which(colData$Region == "SC"),]
 smyth <- smyth[,which(colnames(smyth) %in% rownames(colData))]
 
+order1 <- c(grep("C_HB_A_",colnames(smyth)),grep("E1_HB_A_",colnames(smyth)),grep("E4_HB_A_",colnames(smyth)),grep("Ech_HB_A_",colnames(smyth)),
+            grep("C_HB_AG",colnames(smyth)),grep("E1_HB_AG",colnames(smyth)),grep("E4_HB_AG",colnames(smyth)),grep("Ech_HB_AG",colnames(smyth)),
+            grep("C_S",colnames(smyth)),grep("E1_S",colnames(smyth)),grep("E4_S",colnames(smyth)),grep("Ech_S",colnames(smyth)))
+
+smyth <- smyth[,order1]
+colData <- colData[order1,]
 # countMatrix <- smyth[which(rownames(smyth) %in% de_genes_SCA),]
 
 ddsMat <- DESeqDataSetFromMatrix(smyth,
@@ -33,7 +40,7 @@ vsd2 <- t(vsd)
 datExpr<- vsd2
 
 powers = c(c(1:10), seq(from = 12, to=20, by=2));
-sft=pickSoftThreshold(datExpr,dataIsExpr = TRUE,powerVector = powers,corFnc = cor,corOptions = list(use = 'p'),networkType = "unsigned")
+sft=pickSoftThreshold(datExpr,dataIsExpr = TRUE,powerVector = powers,corFnc = cor,corOptions = list(use = 'p'),networkType = "signed")
 
 #plot results
 # sizeGrWindow(9, 5)
@@ -52,7 +59,7 @@ plot(sft$fitIndices[,1], sft$fitIndices[,5],xlab="Soft Threshold (power)",ylab="
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
 # power of 5 doubled due to signed network
-softPower <- 10
+softPower <- sft$powerEstimate
 
 adj <- adjacency(datExpr,type = "signed",power=softPower)
 
@@ -132,9 +139,7 @@ plot(hclustdatME, main="Clustering tree based of the module eigengenes")
 # sizeGrWindow(8,9)
 plotMEpairs(datME)
 
-# get the actual hub genes
-hubs <- chooseTopHubInEachModule(datExpr = datExpr, dynamicColors,omitColors = "grey",power = 10, type = "signed")
-write.csv(as.data.frame(hubs), "~/Projects/EAE/Results/WGCNA_results/hub_genes.csv")
+
 
 # Gene module significance per module for the different conditions
 GS1 <- as.numeric(cor(datExpr, factor(as.data.frame(datTraits.numeric)$Group), use="p"))
@@ -155,11 +160,10 @@ plotModuleSignificance(GeneSignificance3,dynamicColors, main= "Region")
 plotModuleSignificance(GeneSignificance4,dynamicColors, main= "EAE score")
 dev.off()
 
-# most interconnected genes (leaded by hubgene)
-datKME <- signedKME(datExpr, datME, outputColumnName="MM.")
-# Display the first few rows of the data frame
-head(datKME)
-table(listGenes[abs(datKME$MM.red)>.8])
+
+# # Display the first few rows of the data frame
+# head(datKME)
+# table(listGenes[abs(datKME$MM.red)>.8])
 
 
 FilterGenes= abs(GS1)> .2 & abs(datKME$MM.green)>.8
@@ -233,8 +237,8 @@ verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
 
 ######################################################################################
 pdf("~/Projects/EAE/Results/WGCNA_results/heatmap_modules_turq-gr-brwn.pdf")
-par(mfrow=c(3,1), mar=c(1, 2, 7, 1), ps=16)
-which.module="turquoise";
+par(mfrow=c(4,1), mar=c(1, 2, 7, 1), ps=16)
+which.module="blue";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module, cex.axis=1.5)
 title(which.module, line=6)
@@ -242,23 +246,31 @@ which.module="green";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
 title(which.module, line=6)
-which.module="brown";
-plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
-        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
-title(which.module, line=6)
-dev.off()
-
-pdf("~/Projects/EAE/Results/WGCNA_results/heatmap_modules_red-yel-blu.pdf")
-par(mfrow=c(3,1), mar=c(1, 2, 7, 1), ps=16)
 which.module="red";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
 title(which.module, line=6)
+which.module="turquoise";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
+# dev.off()
+
+#pdf("~/Projects/EAE/Results/WGCNA_results/heatmap_modules_red-yel-blu.pdf")
+par(mfrow=c(4,1), mar=c(1, 2, 7, 1), ps=16)
 which.module="yellow";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
 title(which.module, line=6)
-which.module="blue";
+which.module="black";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
+which.module="brown";
+plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
+        clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
+title(which.module, line=6)
+which.module="green";
 plotMat(t(scale(datExpr[,dynamicColors==which.module ]) ),nrgcols=30,rlabels=T,
         clabels=colnames(t(scale(datExpr[,dynamicColors==which.module ]) )),rcols=which.module)
 title(which.module, line=6)
@@ -309,17 +321,17 @@ categories <- as.character(uniqueFilteredGeneModules[,3])
 
 gene_df <- data.frame(genes=listGenes,module=categories)
 gene_df <- gene_df[order(gene_df$module),]
-write.csv(gene_df, "~/Projects/EAE/Results/WGCNA_results/gene_per_module.csv")
+write.csv(uniqueFilteredGeneModules[order(uniqueFilteredGeneModules$module),], "~/Projects/EAE/Results/WGCNA_results/gene_per_module.csv")
 
-datKME <- datKME[-which(duplicated(filteredGeneModules$external_gene_name))]
-datKME_blue <- listGenes[order(datKME$MM.blue, decreasing = F)][1:50]
+
+# datKME_blue <- listGenes[order(datKME$MM.blue, decreasing = F)][1:50]
 
 enrichmentResults <- userListEnrichment(listGenes, categories,nameOut = "testGenesUserListEnrichment.csv",useBrainLists = T,useBloodAtlases = T,
                    useStemCellLists = T, useBrainRegionMarkers = T, useImmunePathwayLists = T, usePalazzoloWang = T, omitCategories = "grey", outputGenes = T)
 
 ################################################################
 # top 50 genes based on connectivity per module
-
+datKME <- datKME[-which(duplicated(filteredGeneModules$external_gene_name))]
 #top50Finder <- function(module){
 attach(datKME)
 df_list <- lapply(unique(categories),function(module){
@@ -334,6 +346,10 @@ detach()
 
 lapply(df_list,function(df)write.csv(df,paste("~/Projects/EAE/Results/WGCNA_results/top50genes_",df$module[1], ".csv",sep=""),quote = F, row.names = F))
 head(datKME_blue)
+
+# get the actual hub genes
+hubs <- chooseTopHubInEachModule(datExpr = datExpr, dynamicColors,omitColors = "grey",power = 10, type = "signed")
+write.csv(as.data.frame(hubs), "~/Projects/EAE/Results/WGCNA_results/hub_genes.csv")
 
 ###################NETWORK VISUALISATION########################
 # hubs <- chooseTopHubInEachModule(datExpr, dynamicColors, omitColors = "grey",

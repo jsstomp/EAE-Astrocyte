@@ -1,6 +1,6 @@
 ####################################################################
 # Author: Jafta Stomp
-# Date: 27-02-2018
+# Date: 28-06-2018
 # Description: 
 #   This script filters out lowly expressed genes using DAFS.R
 #   and also creates PCA plots to look at if the different conditions
@@ -109,25 +109,27 @@ for(i in df_list) {
   }))
 }
 
-# library(genefilter)
-# ntop <- 500
-# rv <- rowVars(assay(rld))
-# select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
-# mat <- t( assay(rld)[select, ] )
-# pca <- prcomp( mat )
-# 
-# 
-# pca_rotated <- psych::principal(mat, rotate="varimax", nfactors=2, scores=TRUE)
-# print(pca_rotated$scores[1:5,])  # Scores returned by principal()
-# percentVarimax <- round(100 * attr(pca_rotated, "percentVar"))
-# 
-# vm <- varimax(mat)
-# str(vm)
-# 
-# PCAplot(as.data.frame(vm$loadings[,1:2]),vm$loadings[1],vm$loadings[2], data_ACSA$groupID, "rotated", percentVar, "groupID")
-# PCAplot(as.data.frame(pca_rotated$scores), pca_rotated$scores[,1], pca_rotated$scores[,2], data_ACSA$groupID, "rotated", percentVar, "groupID")
-# PCAplot(data_ACSA, PC1, PC2, data_ACSA$groupID, "rotated", percentVar, "groupID")
-# PCAplot()
+# Varimax is not giving wanted results, so disabled
+vmax <- FALSE
+if(vmax == TRUE){
+  library(genefilter)
+  ntop <- 500
+  rv <- rowVars(assay(rld))
+  select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
+  mat <- t( assay(rld)[select, ] )
+  pca <- prcomp( mat )
+  
+  
+  pca_rotated <- psych::principal(mat, rotate="varimax", nfactors=2, scores=TRUE)
+  percentVarimax <- round(100 * attr(pca_rotated, "percentVar"))
+  
+  vm <- varimax(mat)
+  
+  PCAplot(as.data.frame(vm$loadings[,1:2]),vm$loadings[1],vm$loadings[2], data_ACSA$groupID, "rotated", percentVar, "groupID")
+  PCAplot(as.data.frame(pca_rotated$scores), pca_rotated$scores[,1], pca_rotated$scores[,2], data_ACSA$groupID, "rotated", percentVar, "groupID")
+  PCAplot(data_ACSA, PC1, PC2, data_ACSA$groupID, "rotated", percentVar, "groupID")
+  PCAplot()
+}
 
 pdf(paste("Results/PCA_", prefix, ".pdf", sep = ""))
 # plot Population, Condition, Region and GroupID
